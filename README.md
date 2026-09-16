@@ -65,8 +65,9 @@ API reads `HUMANOID_LLM_API_KEY` from the environment.
 ## Use it
 
 - **Type:** click the robot, write, press Return. Esc closes the field.
-- **Talk:** hold ⌥Space, speak, let go.
-- **Switch teammates, hide or show, quit:** the menu bar item.
+- **Talk:** hold ⌥Space, speak, let go. If another app already uses ⌥Space, typing still works.
+- **Close:** hover over the robot and click ×, or right-click it. Bring it back from the menu bar item.
+- **Switch teammates, open settings, reload, quit:** right-click the robot, or use the menu bar item.
 - **Quiet:** "stop" or "be quiet" never reaches the model. The teammate just stops.
 
 It can't see your screen, open apps or browse the web, and it says so.
@@ -113,14 +114,30 @@ flowchart LR
     files[settings.toml<br/>teammates/*.toml] --> app
 ```
 
-- `Sources/TeammateKit` has no user interface: the settings and teammate files, the conversation and
-  its checks (the reply must match the schema, long speech is cut at a sentence, an unknown
-  expression becomes neutral, and a failure gets an apology instead of silence), and the three HTTP
-  clients. `swift test` covers it without any server.
-- `Sources/HumanoidDesktop` is the app: a borderless floating panel on every Space, the character
-  drawn with SwiftUI Canvas (the same proportions and expression table as humanoid-companion), lip
-  sync from the voice's loudness, recording while the Carbon hot key is held (no Accessibility
-  permission needed), and the menu bar item.
+**`Sources/TeammateKit`** (no user interface, fully tested)
+
+| Part | Job |
+|---|---|
+| `TeammateSession` | an `@Observable` state machine, and the only place that decides what happens next: answer, speak, listen, switch |
+| `Conversation` | an actor holding the persona and recent messages; stop words, reply checks, apologies |
+| `Services.swift` | small protocols the session depends on (chat, speech, transcription, playback, recording, the saved choice, HTTP) |
+| `OpenAIClients.swift` | typed `Codable` clients for OpenAI-compatible servers |
+| `TeammateLibrary`, `TeammateCatalog`, `TeammateFile`, `Toml` | the settings and teammate files |
+
+**`Sources/HumanoidDesktop`** (the app, kept thin)
+
+| Folder | Contents |
+|---|---|
+| `App/` | `AppDelegate`, the composition root that creates the real services; the floating panel; the menu bar item |
+| `Views/` | the speech bubble, message field, notices and close button |
+| `Character/` | `FaceAnimator` (pose per frame), `CharacterPainter` (pure drawing), one `AccessoryPainter` per accessory |
+| `Platform/` | AVFoundation playback and recording, the Carbon hot key, the saved teammate choice |
+
+The session depends on protocols, so its tests use fake servers, a fake speaker and a fake microphone.
+The tests cover the timing cases too: an answer that arrives after you switched teammates is dropped,
+and a tap on ⌥Space released before microphone permission arrives never starts recording. A new
+accessory is a new painter, and nothing else changes. Everything builds in Swift 6 language mode with
+strict concurrency checking and no warnings.
 
 Stored on your Mac: the chosen teammate and the window position (user defaults). Recordings are sent
 only to your transcription server and deleted right after.
@@ -128,6 +145,8 @@ only to your transcription server and deleted right after.
 ## Develop
 
 ```bash
+swift format lint --strict --recursive Sources Tests Package.swift   # style, as in CI (.swift-format)
+swift format format --in-place --recursive Sources Tests Package.swift
 swift test                                              # no servers needed
 HUMANOID_LIVE_SERVERS=1 swift test --filter LiveServer  # against the servers in your settings.toml
 swift run HumanoidDesktop                               # run without building the .app (no microphone)

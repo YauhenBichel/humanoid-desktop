@@ -1,55 +1,65 @@
 import Foundation
 
 /// What the teammate says back, checked before it is shown or spoken.
-public struct Reply: Equatable {
-    public enum Source: String { case model, stopWord = "stop-word", fallback }
+public struct Reply: Equatable, Sendable {
+    public enum Source: Equatable, Sendable {
+        case model
+        case stopWord
+        case failure(String)  // why there is no answer from the model
+    }
 
     public var say: String
     public var expression: FaceExpression
-    public var source: Source = .model
-    public var error: String = ""
+    public var source: Source
 
-    public static let maximumSpoken = 400  // characters: three short spoken sentences
+    public init(say: String, expression: FaceExpression, source: Source = .model) {
+        self.say = say
+        self.expression = expression
+        self.source = source
+    }
 }
 
-/// Anything that answers a list of chat messages with a JSON string matching a schema. The real one is
-/// ChatClient; tests pass a closure.
-public protocol ChatCompleting {
-    func complete(messages: [[String: String]], schema: [String: Any]) async throws -> String
-}
-
-public enum ReplyParsing {
+/// Turns the model's answer into a Reply, and holds the rules a reply must follow.
+public enum ReplyRules {
+    public static let maximumSpokenCharacters = 400  // three short spoken sentences
     public static let stopWords: Set<String> = ["stop", "halt", "freeze", "estop", "e-stop", "quiet", "shush"]
 
-    public static var schema: [String: Any] {
-        [
-            "type": "object", "additionalProperties": false, "required": ["say", "expression"],
-            "properties": [
-                "say": ["type": "string"],
-                "expression": ["type": "string", "enum": FaceExpression.allCases.map(\.rawValue)],
-            ],
-        ]
+    public static let schema: JSONValue = [
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["say", "expression"],
+        "properties": [
+            "say": ["type": "string"],
+            "expression": ["type": "string", "enum": .array(FaceExpression.allCases.map { .string($0.rawValue) })],
+        ],
+    ]
+
+    public struct UnusableAnswer: Error, Equatable, Sendable, CustomStringConvertible {
+        public let description: String
     }
 
-    public static func hasStopWord(_ text: String) -> Bool {
-        let words = text.lowercased().split(whereSeparator: { !($0.isLetter || $0 == "-") }).map(String.init)
+    private struct Payload: Decodable {
+        let say: String
+        let expression: String?
+    }
+
+    public static func containsStopWord(_ text: String) -> Bool {
+        let words = text.lowercased().split { !($0.isLetter || $0 == "-") }.map(String.init)
         return !stopWords.isDisjoint(with: words)
     }
 
-    /// The model's JSON answer as a Reply. The spoken text is shortened at a sentence end; an unknown
-    /// expression becomes neutral; an empty or non-JSON answer is an error.
-    public static func parse(_ raw: String) throws -> Reply {
-        guard let data = raw.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let say = object["say"] as? String, !say.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    /// The spoken text is shortened at a sentence end, and an unknown expression becomes neutral.
+    public static func reply(fromModelAnswer answer: String) throws(UnusableAnswer) -> Reply {
+        guard let payload = try? JSONDecoder().decode(Payload.self, from: Data(answer.utf8)),
+            !payload.say.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else {
-            throw TeammateError(message: "the model gave no spoken answer")
+            throw UnusableAnswer(description: "the model gave no spoken answer")
         }
-        let expression = (object["expression"] as? String).flatMap(FaceExpression.init(rawValue:)) ?? .neutral
-        return Reply(say: trimSpoken(say), expression: expression)
+        let expression = payload.expression.flatMap(FaceExpression.init(rawValue:)) ?? .neutral
+        return Reply(say: trimmedForSpeech(payload.say), expression: expression)
     }
 
-    public static func trimSpoken(_ text: String, limit: Int = Reply.maximumSpoken) -> String {
+    public static func trimmedForSpeech(_ text: String, limit: Int = maximumSpokenCharacters) -> String {
         let flat = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         guard flat.count > limit else { return flat }
         let cut = String(flat.prefix(limit))
@@ -57,41 +67,66 @@ public enum ReplyParsing {
         if let end = sentenceEnds.max(), cut.distance(from: cut.startIndex, to: end) > 40 {
             return String(cut[...end])
         }
-        return (cut.split(separator: " ").dropLast().joined(separator: " ")) + "…"
+        return cut.split(separator: " ").dropLast().joined(separator: " ") + "…"
     }
 }
 
-/// One conversation with a teammate: the persona, the recent messages, and safe answers when anything fails.
-public final class Conversation {
+public struct ChatMessage: Codable, Equatable, Sendable {
+    public enum Role: String, Codable, Sendable { case system, user, assistant }
+
+    public let role: Role
+    public let content: String
+
+    public init(_ role: Role, _ content: String) {
+        self.role = role
+        self.content = content
+    }
+}
+
+/// One conversation with one teammate: the persona, the recent messages, and a safe answer when anything fails.
+public actor Conversation {
     public static let maximumHistory = 12  // messages kept: six exchanges
 
-    public private(set) var history: [[String: String]] = []
     public let teammate: Teammate
+    public private(set) var history: [ChatMessage] = []
     private let userName: String
-    private let chat: ChatCompleting
+    private let chat: any ChatCompleting
 
-    public init(teammate: Teammate, userName: String, chat: ChatCompleting) {
-        (self.teammate, self.userName, self.chat) = (teammate, userName, chat)
+    public init(teammate: Teammate, userName: String, chat: any ChatCompleting) {
+        self.teammate = teammate
+        self.userName = userName
+        self.chat = chat
     }
 
     public func respond(to said: String) async -> Reply {
         let text = said.trimmingCharacters(in: .whitespacesAndNewlines)
-        if ReplyParsing.hasStopWord(text) {
+        if ReplyRules.containsStopWord(text) {
             return Reply(say: "Okay, I'll be quiet.", expression: .neutral, source: .stopWord)
         }
         guard !text.isEmpty else {
-            return Reply(say: "Sorry, I did not catch that.", expression: .thinking, source: .fallback, error: "empty input")
+            return Reply(say: "Sorry, I did not catch that.", expression: .thinking, source: .failure("empty input"))
         }
-        let messages = [["role": "system", "content": teammate.persona(userName: userName)]] + history
-            + [["role": "user", "content": text]]
+        let messages =
+            [ChatMessage(.system, teammate.persona(userName: userName))] + history + [ChatMessage(.user, text)]
         do {
-            let reply = try ReplyParsing.parse(try await chat.complete(messages: messages, schema: ReplyParsing.schema))
-            let remembered = try JSONSerialization.data(withJSONObject: ["say": reply.say, "expression": reply.expression.rawValue])
-            history += [["role": "user", "content": text], ["role": "assistant", "content": String(decoding: remembered, as: UTF8.self)]]
-            history = Array(history.suffix(Self.maximumHistory))
+            let reply = try ReplyRules.reply(
+                fromModelAnswer: try await chat.complete(messages, schema: ReplyRules.schema))
+            remember(said: text, reply: reply)
             return reply
         } catch {
-            return Reply(say: "Sorry, I could not think of an answer just now.", expression: .sad, source: .fallback, error: "\(error)")
+            return Reply(
+                say: "Sorry, I could not think of an answer just now.", expression: .sad,
+                source: .failure(String(describing: error)))
         }
+    }
+
+    private func remember(said: String, reply: Reply) {
+        let answer = #"{"say": \#(jsonString(reply.say)), "expression": "\#(reply.expression.rawValue)"}"#
+        history += [ChatMessage(.user, said), ChatMessage(.assistant, answer)]
+        history = Array(history.suffix(Self.maximumHistory))
+    }
+
+    private func jsonString(_ text: String) -> String {
+        String(decoding: (try? JSONEncoder().encode(text)) ?? Data("\"\"".utf8), as: UTF8.self)
     }
 }
