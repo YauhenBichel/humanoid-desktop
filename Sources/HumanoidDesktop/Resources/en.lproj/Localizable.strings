@@ -1,0 +1,36 @@
+/* Humanoid Desktop, English. To translate the app, copy this file to <language>.lproj/Localizable.strings
+   (for example de.lproj) and translate the values; keep the keys and the %@ placeholders. */
+
+/* Menu bar item and right-click menu */
+"menu.teammate" = "%1$@: %2$@";
+"menu.hide" = "Hide %@";
+"menu.show" = "Show %@";
+"menu.typeMessage" = "Type a Message";
+"menu.talkHint" = "Talk: hold %@";
+"menu.openSettings" = "Open Settings File…";
+"menu.reload" = "Reload Settings and Teammates";
+"menu.quit" = "Quit Humanoid Desktop";
+"statusItem.description" = "Humanoid teammate";
+
+/* The teammate's window */
+"window.characterHelp" = "%1$@: click to type, hold %2$@ to talk, right-click for more";
+"window.askPlaceholder" = "Ask %@…";
+"window.holdToTalkHelp" = "Hold %@ to talk";
+"window.closeHelp" = "Hide %1$@ (⌘W or Esc). Show it again from the menu bar, or by holding %2$@.";
+"character.accessibility" = "%1$@, looking %2$@";
+
+/* What the teammate shows or says when the model does not answer */
+"phrase.thinking" = "…";
+"phrase.listening" = "I'm listening…";
+"phrase.holdToTalk" = "Hold %@ while you speak.";
+"phrase.stopping" = "Okay, I'll be quiet.";
+"phrase.didNotCatchThat" = "Sorry, I did not catch that.";
+"phrase.noAnswer" = "Sorry, I could not think of an answer just now.";
+"phrase.couldNotHear" = "Sorry, I could not hear that.";
+"phrase.microphoneOff" = "Microphone access is off: System Settings > Privacy & Security > Microphone.";
+"phrase.greeting" = "Hi! I'm %1$@: I %2$@.";
+"phrase.greetingNamed" = "Hi, %1$@! I'm %2$@: I %3$@.";
+"phrase.chatServerFailed" = "No answer from the chat server at %1$@: %2$@";
+"phrase.speechServerFailed" = "No voice: the speech server at %@ did not answer.";
+"phrase.transcriptionServerFailed" = "No transcription from %1$@: %2$@";
+"phrase.microphoneFailed" = "Could not start the microphone: %@";

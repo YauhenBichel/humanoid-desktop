@@ -48,7 +48,9 @@ public struct Teammate: Equatable, Identifiable, Sendable {
     public var tagline: String
     public var colours: Colours
     public var accessory: Accessory
+    /// The speaking voice, and voices for other languages (`[voices]` in a teammate file: `de = "..."`).
     public var voice: String
+    public var voicesByLanguage: [String: String] = [:]
     public var role: String
     public var restingExpression: FaceExpression
     public var origin: Origin = .builtIn
@@ -89,26 +91,32 @@ public struct Teammate: Equatable, Identifiable, Sendable {
         restingExpression: .happy
     )
 
-    /// The system prompt for the desktop: a character on the screen, not a robot body.
-    public func persona(userName: String) -> String {
+    /// The voice for the answer language: a voice named for that language, or the teammate's own voice.
+    public func voice(for language: Language?) -> String {
+        guard let language else { return voice }
+        return voicesByLanguage[language.code] ?? voicesByLanguage[language.baseCode] ?? voice
+    }
+
+    /// The system prompt for the desktop: a character on the screen, not a robot body. With a language, the
+    /// teammate answers in it whatever language the person writes in.
+    public func persona(userName: String, language: Language? = nil) -> String {
         let who =
             userName.isEmpty
             ? "Never call anyone your owner; if the person tells you their name, use it."
             : "You usually talk with \(userName); call \(userName) by name and never say 'my owner'. "
                 + "If someone tells you a different name, use theirs."
         let expressions = FaceExpression.allCases.map { "'\($0.rawValue)'" }.joined(separator: ", ")
+        let answerLanguage =
+            language.map { " Always answer in \($0.englishName), even when the person writes in another language." }
+            ?? " Answer in the language the person writes in."
         return """
             You are \(name), a humanoid teammate: a small robot character who lives on the person's Mac desktop, \
             with a face on a screen and a voice. \(who) Do not guess anyone's pronouns; use names. You cannot see the \
             screen, open apps, browse the web or run code; say so kindly if asked, and help with what you know. \
             Your personality: warm, cheerful and encouraging; you celebrate small wins. \(role) Speak in one to three \
-            short sentences, as you would out loud: no lists, no markdown, no code blocks, no emojis. Choose the \
-            expression that fits what you say: one of \(expressions). Answer only with the JSON object.
+            short sentences, as you would out loud: no lists, no markdown, no code blocks, no emojis.\(answerLanguage) \
+            Choose the expression that fits what you say: one of \(expressions); keep these names in English. \
+            Answer only with the JSON object.
             """
-    }
-
-    /// What the teammate says when it is chosen.
-    public func greeting(userName: String) -> String {
-        "Hi\(userName.isEmpty ? "" : ", \(userName)")! I'm \(name): I \(tagline)."
     }
 }

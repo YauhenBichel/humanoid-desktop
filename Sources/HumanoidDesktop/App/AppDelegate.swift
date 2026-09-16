@@ -1,16 +1,19 @@
 import AppKit
 import TeammateKit
 
-/// The composition root: builds the session with its real services, then the window, the menu bar item and the
-/// talk shortcut, and connects them. Nothing else creates platform objects.
+/// The composition root: builds the session with its real services and phrases, then the window, the menu bar
+/// item and the talk shortcut, and connects them. Nothing else creates platform objects.
 @main
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private static let talkCombination = TalkShortcut.Combination.optionSpace
+
     private let session = TeammateSession(
-        player: AudioPlayer(), recorder: AudioRecorder(), choices: UserDefaultsChoiceStore())
+        player: AudioPlayer(), recorder: AudioRecorder(), choices: UserDefaultsChoiceStore(),
+        phrases: AppText.sessionPhrases(shortcut: AppDelegate.talkCombination.displayName))
     private var panel: TeammatePanel?
     private var statusMenu: StatusMenu?
-    private var talkShortcut: GlobalHotKey?
+    private var talkShortcut: TalkShortcut?
 
     static func main() {
         let application = NSApplication.shared
@@ -22,32 +25,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         reload()
-        let windowActions = WindowActions(
-            hide: { [weak self] in self?.panel?.hide() },
+        let commands = TeammateCommands(
+            isTeammateVisible: { [weak self] in self?.panel?.isVisible ?? false },
+            toggleTeammate: { [weak self] in self?.panel?.toggle() },
+            hideTeammate: { [weak self] in self?.panel?.hide() },
+            typeMessage: { [weak self] in
+                self?.session.isChatOpen = true
+                self?.panel?.focus()
+            },
             openSettings: { [weak self] in self?.openSettings() },
             reload: { [weak self] in self?.reload() },
             quit: { NSApp.terminate(nil) })
+        let shortcutName = Self.talkCombination.displayName
         let panel = TeammatePanel(
-            rootView: TeammateWindowView(session: session, actions: windowActions), size: TeammateWindowView.size)
+            rootView: TeammateWindowView(session: session, commands: commands, shortcutName: shortcutName),
+            size: TeammateWindowView.size)
         panel.show()
         self.panel = panel
-
-        statusMenu = StatusMenu(
-            session: session,
-            actions: .init(
-                isTeammateVisible: { [weak self] in self?.panel?.isVisible ?? false },
-                toggleVisible: { [weak self] in self?.panel?.toggle() },
-                typeMessage: { [weak self] in
-                    self?.session.isChatOpen = true
-                    self?.panel?.focus()
-                },
-                openSettings: windowActions.openSettings,
-                reload: windowActions.reload,
-                quit: windowActions.quit))
+        statusMenu = StatusMenu(session: session, commands: commands, shortcutName: shortcutName)
 
         do {
-            talkShortcut = try GlobalHotKey(
-                onPress: { [weak self] in self?.session.talkKeyPressed() },
+            talkShortcut = try TalkShortcut(
+                Self.talkCombination,
+                onPress: { [weak self] in
+                    self?.panel?.show()  // talking to a hidden teammate brings it back
+                    self?.session.talkKeyPressed()
+                },
                 onRelease: { [weak self] in self?.session.talkKeyReleased() })
         } catch {
             NSLog("humanoid-desktop: %@", String(describing: error))

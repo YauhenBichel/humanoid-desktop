@@ -52,7 +52,9 @@ final class RecordingTransport: HTTPTransport, @unchecked Sendable {
                 [], schema: ReplyRules.schema)
         } throws: { error in
             (error as? ServerError)
-                == .status(URL(string: "http://127.0.0.1:11434/v1/chat/completions"), 404, "model not found")
+                == .status(
+                    url: URL(string: "http://127.0.0.1:11434/v1/chat/completions"), statusCode: 404,
+                    body: "model not found")
         }
     }
 

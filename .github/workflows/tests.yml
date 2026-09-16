@@ -27,3 +27,19 @@ jobs:
           scripts/build-app.sh
           codesign --verify --strict build/HumanoidDesktop.app
           /usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" build/HumanoidDesktop.app/Contents/Info.plist
+
+  # TeammateKit is portable: the same tests on Linux keep Apple-only APIs out of it. Package.swift leaves the macOS
+  # app out on other systems.
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: swift:6.1-noble@sha256:3991e5dd5c40b04580c1e56f1ad6042f3173829b1995ffa53b84957371c25876
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Swift version
+        run: swift --version
+      - name: TeammateKit builds without warnings, and its tests pass
+        run: |
+          swift build -Xswiftc -warnings-as-errors
+          swift test

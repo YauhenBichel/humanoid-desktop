@@ -18,6 +18,6 @@ struct CharacterView: View {
             }
         }
         .accessibilityElement()
-        .accessibilityLabel("\(teammate.name), looking \(expression.rawValue)")
+        .accessibilityLabel(AppText.characterAccessibility(teammate.name, expression: expression))
     }
 }

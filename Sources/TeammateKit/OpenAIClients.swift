@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+    import FoundationNetworking  // URLRequest on Linux and Windows
+#endif
+
 // Clients for OpenAI-compatible servers, the API that Ollama, llama.cpp, vLLM, Kokoro-FastAPI, Speaches and
 // most routers speak. Request and response bodies are typed Codable structs.
 
@@ -62,7 +66,7 @@ public struct OpenAIChatClient: ChatCompleting {
         let request = try request(messages, schema: schema)
         let data = try await sendChecked(request, over: transport)
         guard let content = try? JSONDecoder().decode(Response.self, from: data).choices.first?.message.content else {
-            throw ServerError.unexpectedBody(request.url)
+            throw ServerError.unexpectedBody(url: request.url)
         }
         return content
     }
@@ -131,7 +135,7 @@ public struct OpenAITranscriptionClient: SpeechTranscribing {
         let request = request(wav: wav)
         let data = try await sendChecked(request, over: transport)
         guard let response = try? JSONDecoder().decode(Response.self, from: data) else {
-            throw ServerError.unexpectedBody(request.url)
+            throw ServerError.unexpectedBody(url: request.url)
         }
         return response.text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -140,7 +144,8 @@ public struct OpenAITranscriptionClient: SpeechTranscribing {
 private func sendChecked(_ request: URLRequest, over transport: any HTTPTransport) async throws -> Data {
     let (data, response) = try await transport.send(request)
     guard (200..<300).contains(response.statusCode) else {
-        throw ServerError.status(request.url, response.statusCode, String(decoding: data.prefix(300), as: UTF8.self))
+        let body = String(decoding: data.prefix(300), as: UTF8.self)
+        throw ServerError.status(url: request.url, statusCode: response.statusCode, body: body)
     }
     return data
 }

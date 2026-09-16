@@ -22,8 +22,6 @@ public struct Reply: Equatable, Sendable {
 /// Turns the model's answer into a Reply, and holds the rules a reply must follow.
 public enum ReplyRules {
     public static let maximumSpokenCharacters = 400  // three short spoken sentences
-    public static let stopWords: Set<String> = ["stop", "halt", "freeze", "estop", "e-stop", "quiet", "shush"]
-
     public static let schema: JSONValue = [
         "type": "object",
         "additionalProperties": false,
@@ -43,9 +41,10 @@ public enum ReplyRules {
         let expression: String?
     }
 
-    public static func containsStopWord(_ text: String) -> Bool {
+    /// English stop words always count; so do those of the answer language.
+    public static func containsStopWord(_ text: String, language: Language? = nil) -> Bool {
         let words = text.lowercased().split { !($0.isLetter || $0 == "-") }.map(String.init)
-        return !stopWords.isDisjoint(with: words)
+        return !(language ?? .english).stopWords.isDisjoint(with: words)
     }
 
     /// The spoken text is shortened at a sentence end, and an unknown expression becomes neutral.
@@ -92,31 +91,40 @@ public actor Conversation {
     private let userName: String
     private let chat: any ChatCompleting
 
-    public init(teammate: Teammate, userName: String, chat: any ChatCompleting) {
+    private let language: Language?
+    private let phrases: SessionPhrases
+
+    public init(
+        teammate: Teammate,
+        userName: String,
+        language: Language? = nil,
+        phrases: SessionPhrases = .english,
+        chat: any ChatCompleting
+    ) {
         self.teammate = teammate
         self.userName = userName
+        self.language = language
+        self.phrases = phrases
         self.chat = chat
     }
 
     public func respond(to said: String) async -> Reply {
         let text = said.trimmingCharacters(in: .whitespacesAndNewlines)
-        if ReplyRules.containsStopWord(text) {
-            return Reply(say: "Okay, I'll be quiet.", expression: .neutral, source: .stopWord)
+        if ReplyRules.containsStopWord(text, language: language) {
+            return Reply(say: phrases.stopping, expression: .neutral, source: .stopWord)
         }
         guard !text.isEmpty else {
-            return Reply(say: "Sorry, I did not catch that.", expression: .thinking, source: .failure("empty input"))
+            return Reply(say: phrases.didNotCatchThat, expression: .thinking, source: .failure("empty input"))
         }
-        let messages =
-            [ChatMessage(.system, teammate.persona(userName: userName))] + history + [ChatMessage(.user, text)]
+        let persona = teammate.persona(userName: userName, language: language)
+        let messages = [ChatMessage(.system, persona)] + history + [ChatMessage(.user, text)]
         do {
             let reply = try ReplyRules.reply(
                 fromModelAnswer: try await chat.complete(messages, schema: ReplyRules.schema))
             remember(said: text, reply: reply)
             return reply
         } catch {
-            return Reply(
-                say: "Sorry, I could not think of an answer just now.", expression: .sad,
-                source: .failure(String(describing: error)))
+            return Reply(say: phrases.noAnswer, expression: .sad, source: .failure(String(describing: error)))
         }
     }
 

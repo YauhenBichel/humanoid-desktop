@@ -95,7 +95,15 @@ final class Box<Value>: @unchecked Sendable {
     private var stored: Value?
 
     var value: Value? {
-        get { lock.withLock { stored } }
-        set { lock.withLock { stored = newValue } }
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return stored
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            stored = newValue
+        }
     }
 }

@@ -1,21 +1,14 @@
 import SwiftUI
 import TeammateKit
 
-/// What the window can ask the app to do. The view does not know about panels, menus or files.
-struct WindowActions {
-    var hide: () -> Void
-    var openSettings: () -> Void
-    var reload: () -> Void
-    var quit: () -> Void
-}
-
 /// The speech bubble, the character, the message field (after a click on the character) and any notice.
 /// A close button sits on the character (clearer on hover); right-clicking gives the menu bar item's choices.
 struct TeammateWindowView: View {
     static let size = CGSize(width: 300, height: 430)
 
     @Bindable var session: TeammateSession
-    let actions: WindowActions
+    let commands: TeammateCommands
+    let shortcutName: String
     @FocusState private var isFieldFocused: Bool
     @State private var isHovering = false
 
@@ -27,7 +20,7 @@ struct TeammateWindowView: View {
             }
             character
             if session.isChatOpen {
-                MessageField(session: session, isFocused: $isFieldFocused)
+                MessageField(session: session, shortcutName: shortcutName, isFocused: $isFieldFocused)
             }
             if !session.notice.isEmpty {
                 NoticeView(text: session.notice)
@@ -52,9 +45,12 @@ struct TeammateWindowView: View {
                 isFieldFocused = session.isChatOpen
             }
             .contextMenu { contextMenu }
-            .help("\(session.teammate.name): click to type, hold ⌥Space to talk, right-click for more")
-            CloseButton(teammateName: session.teammate.name, isHighlighted: isHovering, action: actions.hide)
-                .padding(2)
+            .help(AppText.characterHelp(session.teammate.name, shortcut: shortcutName))
+            CloseButton(
+                teammateName: session.teammate.name, shortcutName: shortcutName, isHighlighted: isHovering,
+                action: commands.hideTeammate
+            )
+            .padding(2)
         }
         .onHover { isHovering = $0 }
     }
@@ -63,15 +59,15 @@ struct TeammateWindowView: View {
     private var contextMenu: some View {
         ForEach(session.catalog.teammates) { teammate in
             Toggle(
-                "\(teammate.name): \(teammate.tagline)",
+                AppText.teammateMenuItem(teammate),
                 isOn: Binding(get: { teammate.key == session.teammate.key }, set: { _ in session.choose(teammate) }))
         }
         Divider()
-        Button("Hide \(session.teammate.name)", action: actions.hide)
-        Button("Open Settings File…", action: actions.openSettings)
-        Button("Reload Settings and Teammates", action: actions.reload)
+        Button(AppText.hide(session.teammate.name), action: commands.hideTeammate)
+        Button(AppText.openSettings, action: commands.openSettings)
+        Button(AppText.reload, action: commands.reload)
         Divider()
-        Button("Quit Humanoid Desktop", action: actions.quit)
+        Button(AppText.quit, action: commands.quit)
     }
 }
 
@@ -96,18 +92,19 @@ struct SpeechBubble: View {
 
 struct MessageField: View {
     @Bindable var session: TeammateSession
+    let shortcutName: String
     var isFocused: FocusState<Bool>.Binding
 
     var body: some View {
         HStack(spacing: 6) {
-            TextField("Ask \(session.teammate.name)…", text: $session.draft)
+            TextField(AppText.askPlaceholder(session.teammate.name), text: $session.draft)
                 .textFieldStyle(.plain)
                 .focused(isFocused)
                 .onSubmit { session.send(session.draft) }
                 .onExitCommand { session.isChatOpen = false }
             Image(systemName: session.activity == .listening ? "waveform" : "mic")
                 .foregroundStyle(session.teammate.colours.glow.color)
-                .help("Hold ⌥Space to talk")
+                .help(AppText.holdToTalkHelp(shortcutName))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
@@ -133,6 +130,7 @@ struct NoticeView: View {
 
 struct CloseButton: View {
     let teammateName: String
+    let shortcutName: String
     let isHighlighted: Bool
     let action: () -> Void
 
@@ -147,7 +145,7 @@ struct CloseButton: View {
         }
         .buttonStyle(.plain)
         .opacity(isHighlighted ? 1 : 0.6)
-        .help("Hide \(teammateName) (⌘W or Esc; show again from the menu bar or with ⌥Space)")
-        .accessibilityLabel("Hide \(teammateName)")
+        .help(AppText.closeHelp(teammateName, shortcut: shortcutName))
+        .accessibilityLabel(AppText.hide(teammateName))
     }
 }

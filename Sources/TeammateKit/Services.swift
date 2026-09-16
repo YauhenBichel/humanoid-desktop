@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+    import FoundationNetworking  // URLSession on Linux and Windows
+#endif
+
 // The seams between the teammate and the outside world. Each is one small job, so a test (or another app)
 // supplies only what it needs, and the session depends on these rather than on URLSession or AVFoundation.
 
@@ -55,21 +59,24 @@ public struct URLSessionTransport: HTTPTransport {
 
     public func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw ServerError.notHTTP(request.url) }
+        guard let http = response as? HTTPURLResponse else { throw ServerError.notHTTP(url: request.url) }
         return (data, http)
     }
 }
 
 public enum ServerError: Error, Equatable, Sendable, CustomStringConvertible {
-    case notHTTP(URL?)
-    case status(URL?, Int, String)
-    case unexpectedBody(URL?)
+    case notHTTP(url: URL?)
+    case status(url: URL?, statusCode: Int, body: String)
+    case unexpectedBody(url: URL?)
 
     public var description: String {
         switch self {
-        case .notHTTP(let url): "\(url?.absoluteString ?? "the server") did not answer over HTTP"
-        case .status(let url, let code, let body): "\(url?.absoluteString ?? "the server") answered \(code): \(body)"
-        case .unexpectedBody(let url): "\(url?.absoluteString ?? "the server") answered in an unexpected format"
+        case .notHTTP(let url):
+            "\(url?.absoluteString ?? "the server") did not answer over HTTP"
+        case .status(let url, let statusCode, let body):
+            "\(url?.absoluteString ?? "the server") answered \(statusCode): \(body)"
+        case .unexpectedBody(let url):
+            "\(url?.absoluteString ?? "the server") answered in an unexpected format"
         }
     }
 }
