@@ -1,0 +1,19 @@
+# humanoid-companion settings: every value fills in the environment variable named next to it,
+# unless that variable is already set. Keep API keys out of this file (use HUMANOID_LLM_API_KEY).
+
+[user]
+name = ""                                      # HUMANOID_USER_NAME: the robot calls you by it
+name_be = ""                                   # HUMANOID_USER_NAME_BE: your name in Belarusian, for the goodbye
+
+[llm]
+base_url = "http://127.0.0.1:11434/v1"         # HUMANOID_LLM_BASE_URL: any OpenAI-compatible chat server
+model = ""                                     # HUMANOID_LLM_MODEL
+
+[voice]
+tts_base_url = "http://127.0.0.1:8880/v1"      # HUMANOID_TTS_BASE_URL: /audio/speech
+stt_base_url = "http://127.0.0.1:8000/v1"      # HUMANOID_STT_BASE_URL: /audio/transcriptions
+be_tts_url = "http://127.0.0.1:11810/v1"       # HUMANOID_BE_TTS_URL: the Belarusian goodbye
+voice = "af_heart"                             # HUMANOID_TTS_VOICE: the plain robot's voice
+
+[songs]
+# tempo = "~/songs"                            # a teammate's song library, used when --songs is not given

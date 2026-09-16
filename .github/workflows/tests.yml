@@ -1,0 +1,25 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Swift version
+        run: swift --version
+      - name: Tests (no servers: the model, speech and transcription clients are checked on their requests)
+        run: swift test
+      - name: The app bundle builds and is signed
+        run: |
+          scripts/build-app.sh
+          codesign --verify --strict build/HumanoidDesktop.app
+          /usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" build/HumanoidDesktop.app/Contents/Info.plist
