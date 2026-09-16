@@ -18,6 +18,8 @@ binary="$(swift build -c release --show-bin-path)/HumanoidDesktop"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$binary" "$APP/Contents/MacOS/HumanoidDesktop"
+# The strings the app shows, one .lproj per language (Bundle.module looks for this bundle in Contents/Resources).
+cp -R "$(dirname "$binary")/humanoid-desktop_HumanoidDesktop.bundle" "$APP/Contents/Resources/"
 cat >"$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -28,6 +30,9 @@ cat >"$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>Humanoid Desktop</string>
   <key>CFBundleExecutable</key><string>HumanoidDesktop</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <!-- Offer the app in every language it has strings for. -->
+  <key>CFBundleAllowMixedLocalizations</key><true/>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>

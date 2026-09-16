@@ -53,6 +53,7 @@ public final class TeammateSession {
     @ObservationIgnored private let player: any AudioPlaying
     @ObservationIgnored private let recorder: any AudioRecording
     @ObservationIgnored private let choices: any TeammateChoiceStore
+    @ObservationIgnored private let phrases: SessionPhrases
     @ObservationIgnored private var work: Task<Void, Never>?
     /// Increases whenever what the teammate is doing is interrupted; late results from earlier turns are dropped.
     @ObservationIgnored private var turn = 0
@@ -63,11 +64,13 @@ public final class TeammateSession {
         player: any AudioPlaying,
         recorder: any AudioRecording,
         choices: any TeammateChoiceStore,
+        phrases: SessionPhrases = .english,
         makeServices: @escaping (TeammateSettings) -> Services = Services.openAICompatible
     ) {
         self.player = player
         self.recorder = recorder
         self.choices = choices
+        self.phrases = phrases
         self.makeServices = makeServices
         let services = makeServices(.defaults)
         self.services = services
@@ -90,9 +93,11 @@ public final class TeammateSession {
         interrupt()
         teammate = newTeammate
         choices.chosenKey = newTeammate.key
-        conversation = Conversation(teammate: newTeammate, userName: settings.userName, chat: services.chat)
+        conversation = Conversation(
+            teammate: newTeammate, userName: settings.userName, language: settings.language, phrases: phrases,
+            chat: services.chat)
         expression = newTeammate.restingExpression
-        bubble = newTeammate.greeting(userName: settings.userName)
+        bubble = phrases.greeting(settings.userName, newTeammate)
     }
 
     // MARK: Talking
@@ -106,7 +111,7 @@ public final class TeammateSession {
         draft = ""
         activity = .thinking
         expression = .thinking
-        bubble = "…"
+        bubble = phrases.thinking
         let conversation = self.conversation
         work = Task { [weak self] in
             let reply = await conversation.respond(to: said)
@@ -124,7 +129,7 @@ public final class TeammateSession {
         expression = reply.expression
         bubble = reply.say
         if case .failure(let reason) = reply.source {
-            notice = "No answer from the chat server at \(settings.chatBaseURL.absoluteString): \(reason)"
+            notice = phrases.chatServerFailed(settings.chatBaseURL.absoluteString, reason)
         } else {
             notice = ""
         }
@@ -133,7 +138,7 @@ public final class TeammateSession {
     private func speak(_ text: String, turn: Int) async {
         activity = .speaking
         do {
-            let wav = try await services.speech.speak(text, voice: teammate.voice)
+            let wav = try await services.speech.speak(text, voice: teammate.voice(for: settings.language))
             guard isCurrent(turn) else { return }
             try await player.play(wav) { [weak self] level in
                 guard let self, self.isCurrent(turn) else { return }
@@ -141,9 +146,7 @@ public final class TeammateSession {
             }
         } catch {
             // Without a speech server the teammate still answers, in the bubble only.
-            if isCurrent(turn) {
-                notice = "No voice: the speech server at \(settings.speechBaseURL.absoluteString) did not answer."
-            }
+            if isCurrent(turn) { notice = phrases.speechServerFailed(settings.speechBaseURL.absoluteString) }
         }
         if isCurrent(turn) {
             voiceLevel = 0
@@ -161,19 +164,19 @@ public final class TeammateSession {
         work = Task { [weak self] in
             guard let self else { return }
             let allowed = await self.recorder.requestPermission()
-            // The key may have been released while macOS asked for permission: then there is nothing to record.
+            // The key may have been released while the system asked for permission: then there is nothing to record.
             guard self.isCurrent(turn), self.isTalkKeyDown else { return }
             guard allowed else {
-                self.notice = "Microphone access is off: System Settings > Privacy & Security > Microphone."
+                self.notice = self.phrases.microphoneOff
                 return
             }
             do {
                 try self.recorder.start()
                 self.activity = .listening
                 self.expression = .listening
-                self.bubble = "I'm listening…"
+                self.bubble = self.phrases.listening
             } catch {
-                self.notice = "Could not start the microphone: \(error)"
+                self.notice = self.phrases.microphoneFailed(String(describing: error))
             }
         }
     }
@@ -185,12 +188,12 @@ public final class TeammateSession {
         guard let wav = recorder.stop() else {
             activity = .idle
             expression = teammate.restingExpression
-            bubble = "Hold ⌥Space while you speak."
+            bubble = phrases.holdToTalk
             return
         }
         activity = .transcribing
         expression = .thinking
-        bubble = "…"
+        bubble = phrases.thinking
         let turn = self.turn
         let transcription = services.transcription
         work = Task { [weak self] in
@@ -203,8 +206,9 @@ public final class TeammateSession {
                 guard let self, self.isCurrent(turn) else { return }
                 self.activity = .idle
                 self.expression = .sad
-                self.bubble = "Sorry, I could not hear that."
-                self.notice = "No transcription from \(self.settings.transcriptionBaseURL.absoluteString): \(error)"
+                self.bubble = self.phrases.couldNotHear
+                self.notice = self.phrases.transcriptionServerFailed(
+                    self.settings.transcriptionBaseURL.absoluteString, String(describing: error))
             }
         }
     }

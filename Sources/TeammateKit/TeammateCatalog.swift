@@ -85,6 +85,12 @@ public enum TeammateFile {
             }
             teammate.restingExpression = expression
         }
+        for (code, value) in table["voices"]?.table ?? [:] {
+            guard let language = Language(code: code), let voice = value.string, !voice.isEmpty else {
+                throw failure("voices.\(code): expected a language code with a voice name, like de = \"af_heart\"")
+            }
+            teammate.voicesByLanguage[language.code] = voice
+        }
         let colours = table["colours"]?.table ?? [:]
         let fields: [(name: String, path: WritableKeyPath<Teammate.Colours, RGB>)] = [
             ("glow", \.glow), ("background", \.screen), ("caption", \.caption), ("trim", \.trim),

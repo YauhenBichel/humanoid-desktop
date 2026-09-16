@@ -87,6 +87,9 @@ voice = "af_sky"                   # a voice your speech server knows
 resting_expression = "happy"       # neutral, happy, thinking, surprised, sad, listening or sleeping
 role = "Your role: you tell short, true stories about space, and you love questions about the planets."
 
+[voices]                           # optional: a voice per answer language
+de = "af_heart"
+
 [colours]
 glow = "#9fd0ff"
 background = "#05070f"
@@ -97,6 +100,37 @@ trim = "#2a3552"
 Reload from the menu bar and pick Nova. A file with a mistake is reported under the robot, naming the
 file and the field; the other teammates keep working. With humanoid-companion installed,
 `humanoid-teammate new nova --from byte` writes this file for you.
+
+## Languages
+
+**The teammate's replies:** set `language` and it answers in that language, whatever you type or say:
+
+```toml
+[user]
+name = "Alex"
+language = "de"          # any ISO 639-1 code; leave it out to answer in the language you use
+```
+
+- **Voices:** a teammate speaks with its own voice. Give it a voice per language in its file
+  (`[voices]` with `de = "..."`, see below), using voices your speech server has.
+- **Stop words:** they work in English and in the answer language ("stopp", "хопіць", "silencio", …).
+
+**The app's menus and messages:** these come from `Sources/HumanoidDesktop/Resources/<language>.lproj/Localizable.strings`.
+English is included. To add a language, copy `en.lproj` to, for example, `de.lproj` and translate the values.
+macOS then shows it to people whose system language it is.
+
+## Platforms
+
+| Part | macOS | Linux | Windows |
+|---|---|---|---|
+| `TeammateKit` (settings, teammates, conversation, languages, clients) | built and tested in CI | built and tested in CI | written to build; not yet tested ([#11](https://github.com/YauhenBichel/humanoid-desktop/issues/11)) |
+| The desktop app (floating character, menu bar, voice) | yes | not yet ([#12](https://github.com/YauhenBichel/humanoid-desktop/issues/12)) | not yet ([#12](https://github.com/YauhenBichel/humanoid-desktop/issues/12)) |
+
+Everything platform-specific stays in the app target. `TeammateKit` never mentions a menu bar, a shortcut
+or a settings screen: an app on another system passes its own `SessionPhrases` and its own implementations
+of the protocols in `Services.swift`. The settings folder follows each system's convention:
+`~/.config/humanoid-companion` (or `$XDG_CONFIG_HOME`) on macOS and Linux, `%APPDATA%\humanoid-companion`
+on Windows. `HUMANOID_CONFIG_DIR` overrides it everywhere.
 
 ## How it works
 

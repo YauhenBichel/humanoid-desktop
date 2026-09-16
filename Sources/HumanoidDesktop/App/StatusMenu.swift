@@ -4,24 +4,18 @@ import TeammateKit
 /// The menu bar item. Its menu is rebuilt each time it opens, so teammates added since the last Reload appear.
 @MainActor
 final class StatusMenu: NSObject, NSMenuDelegate {
-    struct Actions {
-        var isTeammateVisible: () -> Bool
-        var toggleVisible: () -> Void
-        var typeMessage: () -> Void
-        var openSettings: () -> Void
-        var reload: () -> Void
-        var quit: () -> Void
-    }
-
     private let session: TeammateSession
-    private let actions: Actions
+    private let commands: TeammateCommands
+    private let shortcutName: String
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
-    init(session: TeammateSession, actions: Actions) {
+    init(session: TeammateSession, commands: TeammateCommands, shortcutName: String) {
         self.session = session
-        self.actions = actions
+        self.commands = commands
+        self.shortcutName = shortcutName
         super.init()
-        item.button?.image = NSImage(systemSymbolName: "face.smiling", accessibilityDescription: "Humanoid teammate")
+        item.button?.image = NSImage(
+            systemSymbolName: "face.smiling", accessibilityDescription: AppText.statusItemDescription)
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
@@ -30,25 +24,25 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         for teammate in session.catalog.teammates {
-            let entry = ActionMenuItem(title: "\(teammate.name): \(teammate.tagline)") { [session] in
+            let entry = ActionMenuItem(title: AppText.teammateMenuItem(teammate)) { [session] in
                 session.choose(teammate)
             }
             entry.state = teammate.key == session.teammate.key ? .on : .off
             menu.addItem(entry)
         }
         menu.addItem(.separator())
-        let visibility = actions.isTeammateVisible() ? "Hide" : "Show"
-        menu.addItem(
-            ActionMenuItem(title: "\(visibility) \(session.teammate.name)", key: "t", action: actions.toggleVisible))
-        menu.addItem(ActionMenuItem(title: "Type a Message", key: "m", action: actions.typeMessage))
-        let talk = NSMenuItem(title: "Talk: hold ⌥Space", action: nil, keyEquivalent: "")
-        talk.isEnabled = false
-        menu.addItem(talk)
+        let name = session.teammate.name
+        let visibility = commands.isTeammateVisible() ? AppText.hide(name) : AppText.show(name)
+        menu.addItem(ActionMenuItem(title: visibility, key: "t", action: commands.toggleTeammate))
+        menu.addItem(ActionMenuItem(title: AppText.typeMessage, key: "m", action: commands.typeMessage))
+        let talkHint = NSMenuItem(title: AppText.talkHint(shortcutName), action: nil, keyEquivalent: "")
+        talkHint.isEnabled = false
+        menu.addItem(talkHint)
         menu.addItem(.separator())
-        menu.addItem(ActionMenuItem(title: "Open Settings File…", key: ",", action: actions.openSettings))
-        menu.addItem(ActionMenuItem(title: "Reload Settings and Teammates", key: "r", action: actions.reload))
+        menu.addItem(ActionMenuItem(title: AppText.openSettings, key: ",", action: commands.openSettings))
+        menu.addItem(ActionMenuItem(title: AppText.reload, key: "r", action: commands.reload))
         menu.addItem(.separator())
-        menu.addItem(ActionMenuItem(title: "Quit Humanoid Desktop", key: "q", action: actions.quit))
+        menu.addItem(ActionMenuItem(title: AppText.quit, key: "q", action: commands.quit))
     }
 }
 

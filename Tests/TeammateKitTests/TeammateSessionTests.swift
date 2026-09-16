@@ -50,7 +50,7 @@ final class MemoryChoices: TeammateChoiceStore {
 struct FixedSpeech: SpeechSynthesizing {
     var fails = false
     func speak(_ text: String, voice: String) async throws -> Data {
-        if fails { throw ServerError.status(nil, 503, "down") }
+        if fails { throw ServerError.status(url: nil, statusCode: 503, body: "down") }
         return Data("wav:\(voice):\(text)".utf8)
     }
 }
@@ -131,7 +131,7 @@ private func eventually(_ condition: @MainActor () async -> Bool) async {
         await chat.release()
         try? await Task.sleep(for: .milliseconds(50))
 
-        #expect(session.teammate == .tempo && session.bubble == Teammate.tempo.greeting(userName: ""))
+        #expect(session.teammate == .tempo && session.bubble == SessionPhrases.english.greeting("", .tempo))
         #expect(session.expression == .happy && session.activity == .idle && player.played.isEmpty)
     }
 
@@ -161,7 +161,8 @@ private func eventually(_ condition: @MainActor () async -> Bool) async {
     }
 
     @Test func withoutAChatServerTheTeammateApologisesAndSaysWhere() async {
-        let (session, _) = makeSession(chat: CannedChat { _ in throw ServerError.status(nil, 500, "boom") })
+        let (session, _) = makeSession(
+            chat: CannedChat { _ in throw ServerError.status(url: nil, statusCode: 500, body: "boom") })
         session.send("hello")
         await eventually { !session.notice.isEmpty }
         #expect(session.expression == .sad && session.notice.contains("http://127.0.0.1:11434/v1"))
@@ -205,7 +206,7 @@ private func eventually(_ condition: @MainActor () async -> Bool) async {
         let (session, _) = makeSession(recorder: recorder)
         session.talkKeyPressed()
         await eventually { !session.notice.isEmpty }
-        #expect(session.notice.contains("Privacy & Security") && recorder.startCount == 0)
+        #expect(session.notice == SessionPhrases.english.microphoneOff && recorder.startCount == 0)
     }
 
     @Test func aTapTooShortForAWordAsksToHoldTheKey() async {
@@ -215,7 +216,7 @@ private func eventually(_ condition: @MainActor () async -> Bool) async {
         session.talkKeyPressed()
         await eventually { session.activity == .listening }
         session.talkKeyReleased()
-        #expect(session.activity == .idle && session.bubble == "Hold ⌥Space while you speak.")
+        #expect(session.activity == .idle && session.bubble == SessionPhrases.english.holdToTalk)
     }
 
     @Test func theLastChosenTeammateComesBackAndFileProblemsAreShown() {

@@ -5,13 +5,41 @@ extension RGB {
     var color: Color { Color(red: Double(red) / 255, green: Double(green) / 255, blue: Double(blue) / 255) }
 }
 
+/// The bust's layout, as fractions, shared with humanoid-companion's character renderer (character.py) so the
+/// desktop and the video clips draw the same robot.
+enum BustProportions {
+    /// The drawing unit is the frame's width, or three quarters of its height if that is smaller.
+    static let unitShareOfHeight = 0.75
+    static let headWidth = 0.72  // of the unit
+    static let headHeight = 0.56  // of the unit
+    static let bezel = 0.035  // of the unit, at least 4 points
+    static let headCentreY = 0.40  // of the frame height
+    static let headCornerRadius = 0.22  // of the head height
+    static let neckLength = 0.16  // of the head height
+    static let neckHalfWidth = 0.09  // of the head width
+    static let shoulderHalfWidth = 0.62  // of the head width
+    static let badgeRadius = 0.05  // of the head width
+    static let badgeDrop = 0.22  // of the head height, below the top of the shoulders
+}
+
+/// The face's layout on the screen, in face units (a tenth of the screen's shorter side, times the feature scale).
+enum FaceLayout {
+    static let eyeSpacing = 2.2  // from the centre to each eye
+    static let eyeHeightShare = 0.42  // of the screen height, from the top
+    static let mouthHeightShare = 0.7  // of the screen height, from the top
+    static let eyeWidth = 1.2
+    static let eyeHeight = 1.6
+    static let mouthWidth = 2.2
+    static let glowRadius = 0.35
+}
+
 /// The measurements of the head, in the head's own coordinates (its centre is the origin).
 struct HeadGeometry {
     let width: Double
     let height: Double
     let bezel: Double
     var frame: CGRect { CGRect(x: -width / 2, y: -height / 2, width: width, height: height) }
-    var cornerRadius: Double { height * 0.22 }
+    var cornerRadius: Double { height * BustProportions.headCornerRadius }
     var screen: CGRect { frame.insetBy(dx: bezel, dy: bezel) }
 }
 
@@ -90,9 +118,11 @@ enum CharacterPainter {
         in context: inout GraphicsContext,
         size: CGSize
     ) {
-        let unit = min(size.width, size.height * 0.75)
-        let head = HeadGeometry(width: unit * 0.72, height: unit * 0.56, bezel: max(4, unit * 0.035))
-        let centre = CGPoint(x: size.width / 2, y: size.height * 0.40)
+        let unit = min(size.width, size.height * BustProportions.unitShareOfHeight)
+        let head = HeadGeometry(
+            width: unit * BustProportions.headWidth, height: unit * BustProportions.headHeight,
+            bezel: max(4, unit * BustProportions.bezel))
+        let centre = CGPoint(x: size.width / 2, y: size.height * BustProportions.headCentreY)
         drawShoulders(teammate, head: head, centre: centre, in: &context, size: size)
 
         var headContext = context
@@ -119,15 +149,16 @@ enum CharacterPainter {
     ) {
         let trim = teammate.colours.trim.color
         let neckTop = centre.y + head.height / 2 - head.bezel
-        let shouldersTop = neckTop + head.height * 0.16
+        let shouldersTop = neckTop + head.height * BustProportions.neckLength
         let neck = CGRect(
-            x: centre.x - head.width * 0.09, y: neckTop, width: head.width * 0.18, height: shouldersTop - neckTop + 4)
+            x: centre.x - head.width * BustProportions.neckHalfWidth, y: neckTop,
+            width: 2 * head.width * BustProportions.neckHalfWidth, height: shouldersTop - neckTop + 4)
         context.fill(Path(neck), with: .color(trim.opacity(0.7)))
-        let halfWidth = head.width * 0.62
+        let halfWidth = head.width * BustProportions.shoulderHalfWidth
         let shoulders = CGRect(x: centre.x - halfWidth, y: shouldersTop, width: 2 * halfWidth, height: size.height)
         context.fill(Path(roundedRect: shoulders, cornerRadius: halfWidth * 0.5), with: .color(trim))
-        let badge = head.width * 0.05
-        let badgeCentreY = shouldersTop + head.height * 0.22
+        let badge = head.width * BustProportions.badgeRadius
+        let badgeCentreY = shouldersTop + head.height * BustProportions.badgeDrop
         let badgeRectangle = CGRect(x: centre.x - badge, y: badgeCentreY - badge, width: 2 * badge, height: 2 * badge)
         context.fill(Path(ellipseIn: badgeRectangle), with: .color(teammate.colours.glow.color))
     }
@@ -149,7 +180,7 @@ enum FacePainter {
         var face = context
         face.clip(to: Path(roundedRect: screen, cornerRadius: unit))
         var glowing = face
-        glowing.addFilter(.shadow(color: glow.opacity(0.9), radius: unit * 0.35))
+        glowing.addFilter(.shadow(color: glow.opacity(0.9), radius: unit * FaceLayout.glowRadius))
         drawEyes(shape, pose: pose, glow: glow, screen: screen, unit: unit, in: &glowing)
         drawMouth(shape, pose: pose, glow: glow, screen: screen, unit: unit, in: &glowing)
         drawExtras(shape, pose: pose, glow: glow, screen: screen, unit: unit, in: &face)
@@ -159,12 +190,12 @@ enum FacePainter {
         _ shape: FaceExpression.Shape, pose: CharacterPose, glow: Color, screen: CGRect, unit: Double,
         in context: inout GraphicsContext
     ) {
-        let eyeWidth = unit * 1.2 * pose.eyeWidth
-        let eyeHeight = max(unit * 0.08, unit * 1.6 * pose.eyeOpen * (1 - pose.blink))
+        let eyeWidth = unit * FaceLayout.eyeWidth * pose.eyeWidth
+        let eyeHeight = max(unit * 0.08, unit * FaceLayout.eyeHeight * pose.eyeOpen * (1 - pose.blink))
         for side in [-1.0, 1.0] {
             let centre = CGPoint(
-                x: screen.midX + side * unit * 2.2 + pose.gaze.x * unit,
-                y: screen.minY + screen.height * 0.42 + pose.gaze.y * unit)
+                x: screen.midX + side * unit * FaceLayout.eyeSpacing + pose.gaze.x * unit,
+                y: screen.minY + screen.height * FaceLayout.eyeHeightShare + pose.gaze.y * unit)
             if shape.has(.arcEyes) {
                 var arc = Path()
                 arc.addArc(
@@ -190,8 +221,8 @@ enum FacePainter {
         _ shape: FaceExpression.Shape, pose: CharacterPose, glow: Color, screen: CGRect, unit: Double,
         in context: inout GraphicsContext
     ) {
-        let centre = CGPoint(x: screen.midX, y: screen.minY + screen.height * 0.7)
-        let width = unit * 2.2 * pose.mouthWidth
+        let centre = CGPoint(x: screen.midX, y: screen.minY + screen.height * FaceLayout.mouthHeightShare)
+        let width = unit * FaceLayout.mouthWidth * pose.mouthWidth
         if pose.mouthOpen > 0.04 || shape.has(.openMouth) {
             let radiusX = shape.has(.openMouth) ? unit * 0.55 : width / 2
             let radiusY = shape.has(.openMouth) ? unit * 0.45 : unit * (0.15 + 1.3 * pose.mouthOpen) / 2
