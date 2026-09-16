@@ -9,19 +9,21 @@ import Testing
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["HUMANOID_LIVE_SERVERS"] == "1"))
 struct LiveServerTests {
     @Test func byteAnswersSpeaksAndIsHeard() async throws {
-        let settings = try Settings.load()
-        let conversation = Conversation(teammate: .byte, userName: settings.userName, chat: ChatClient(settings: settings))
+        let settings = try TeammateLibrary.loadSettings()
+        let conversation = Conversation(
+            teammate: .byte, userName: settings.userName, chat: OpenAIChatClient(settings: settings))
         let reply = await conversation.respond(to: "In one sentence, what is a hash map?")
-        #expect(reply.source == .model, "chat server: \(reply.error)")
+        #expect(reply.source == .model, "chat server: \(reply.source)")
         print("Byte [\(reply.expression.rawValue)]: \(reply.say)")
 
-        let speech = SpeechClient(settings: settings)
-        let wav = try await speech.speak(reply.say, voice: Teammate.byte.voice)
+        let wav = try await OpenAISpeechClient(settings: settings).speak(reply.say, voice: Teammate.byte.voice)
         #expect(wav.prefix(4) == Data("RIFF".utf8))
-        let heard = try await speech.transcribe(wav: wav)
+        let heard = try await OpenAITranscriptionClient(settings: settings).transcribe(wav)
         print("heard back: \(heard)")
-        let spokenWords = Set(reply.say.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init))
-        let heardWords = Set(heard.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init))
-        #expect(Double(spokenWords.intersection(heardWords).count) / Double(max(1, spokenWords.count)) > 0.6)
+        func words(_ text: String) -> Set<String> {
+            Set(text.lowercased().split { !$0.isLetter }.map(String.init))
+        }
+        let overlap = Double(words(reply.say).intersection(words(heard)).count) / Double(max(1, words(reply.say).count))
+        #expect(overlap > 0.6)
     }
 }

@@ -20,6 +20,5 @@ let package = Package(
         // Fixtures/ holds files written by humanoid-companion itself (its settings and teammate templates):
         // both apps must read the same files.
         .testTarget(name: "TeammateKitTests", dependencies: ["TeammateKit"], resources: [.copy("Fixtures")]),
-    ],
-    swiftLanguageModes: [.v5]
+    ]
 )
