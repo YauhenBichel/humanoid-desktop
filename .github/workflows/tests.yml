@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Swift version
         run: swift --version
-      - name: Tests (no servers: the model, speech and transcription clients are checked on their requests)
+      - name: "Tests (no servers: the model, speech and transcription clients are checked on their requests)"
         run: swift test
       - name: The app bundle builds and is signed
         run: |
