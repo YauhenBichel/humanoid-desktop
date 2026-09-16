@@ -5,6 +5,8 @@ import SwiftUI
 /// can take keyboard focus for the message field without appearing in the Dock or the app switcher.
 final class FloatingPanel: NSPanel {
     private static let frameName = "TeammatePanel"
+    /// ⌘W or Esc (when nothing inside handled it).
+    var onClose: () -> Void = {}
 
     init(contentView: NSView, size: CGSize) {
         super.init(
@@ -26,6 +28,25 @@ final class FloatingPanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
+
+    override func cancelOperation(_ sender: Any?) {
+        onClose()
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if modifiers == .command, event.charactersIgnoringModifiers == "w" {
+            onClose()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+/// Hosts the SwiftUI content so that the first click on the floating teammate acts (on the close button, the
+/// character, the message field) instead of only bringing the window forward, while another app is active.
+final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 /// Shows, hides and focuses the teammate's window.
@@ -34,7 +55,8 @@ final class TeammatePanel {
     private let panel: FloatingPanel
 
     init(rootView: some View, size: CGSize) {
-        panel = FloatingPanel(contentView: NSHostingView(rootView: rootView), size: size)
+        panel = FloatingPanel(contentView: FirstClickHostingView(rootView: rootView), size: size)
+        panel.onClose = { [weak self] in self?.hide() }
     }
 
     var isVisible: Bool { panel.isVisible }

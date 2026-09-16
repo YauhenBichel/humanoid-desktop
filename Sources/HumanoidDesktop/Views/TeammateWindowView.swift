@@ -10,7 +10,7 @@ struct WindowActions {
 }
 
 /// The speech bubble, the character, the message field (after a click on the character) and any notice.
-/// Hovering shows a close button; right-clicking gives the same choices as the menu bar item.
+/// A close button sits on the character (clearer on hover); right-clicking gives the menu bar item's choices.
 struct TeammateWindowView: View {
     static let size = CGSize(width: 300, height: 430)
 
@@ -38,21 +38,25 @@ struct TeammateWindowView: View {
     }
 
     private var character: some View {
-        CharacterView(teammate: session.teammate, expression: session.expression, voiceLevel: { session.voiceLevel })
+        // The close button is a sibling of the character, not an overlay inside its tap gesture, so a click on it
+        // always closes instead of opening the message field. It is always there: hover tracking does not run
+        // while another app is active, so a hover-only button could not be found.
+        ZStack(alignment: .topTrailing) {
+            CharacterView(
+                teammate: session.teammate, expression: session.expression, voiceLevel: { session.voiceLevel }
+            )
             .frame(width: 170, height: 200)
             .contentShape(Rectangle())
-            .overlay(alignment: .topTrailing) {
-                if isHovering {
-                    CloseButton(teammateName: session.teammate.name, action: actions.hide)
-                }
-            }
-            .onHover { isHovering = $0 }
             .onTapGesture {
                 session.isChatOpen.toggle()
                 isFieldFocused = session.isChatOpen
             }
             .contextMenu { contextMenu }
             .help("\(session.teammate.name): click to type, hold ⌥Space to talk, right-click for more")
+            CloseButton(teammateName: session.teammate.name, isHighlighted: isHovering, action: actions.hide)
+                .padding(2)
+        }
+        .onHover { isHovering = $0 }
     }
 
     @ViewBuilder
@@ -129,17 +133,21 @@ struct NoticeView: View {
 
 struct CloseButton: View {
     let teammateName: String
+    let isHighlighted: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "xmark.circle.fill")
-                .font(.system(size: 16))
+                .font(.system(size: 20))
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, .black.opacity(0.55))
+                .foregroundStyle(.white, .black.opacity(isHighlighted ? 0.8 : 0.45))
+                .frame(width: 28, height: 28)  // a comfortable target around the small symbol
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help("Hide \(teammateName) (show again from the menu bar)")
+        .opacity(isHighlighted ? 1 : 0.6)
+        .help("Hide \(teammateName) (⌘W or Esc; show again from the menu bar or with ⌥Space)")
         .accessibilityLabel("Hide \(teammateName)")
     }
 }
