@@ -3,10 +3,17 @@
 [![tests](https://github.com/YauhenBichel/humanoid-desktop/actions/workflows/tests.yml/badge.svg)](https://github.com/YauhenBichel/humanoid-desktop/actions/workflows/tests.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black)
+![Linux: TeammateKit](https://img.shields.io/badge/Linux-TeammateKit-lightgrey)
 
 A humanoid teammate on your Mac desktop. A small robot character floats above your windows,
 blinks, looks around and reacts. Click it and type, or hold **⌥Space** and just speak: it answers
-with its face, a speech bubble and its voice. The model behind it is **one you run yourself**.
+with its face, a speech bubble and its voice. The model behind it is **one you choose**.
+
+<p align="center">
+  <img src="docs/media/demo.gif" width="360" alt="Byte, a green robot in the corner of a Mac desktop, greets Yauhen; the question 'what is BFS algorithm' is typed, Byte thinks, then explains breadth-first search while its mouth moves">
+</p>
+
+**[Website](https://yauhenbichel.github.io/humanoid-desktop/)** · [demo video](docs/media/demo.mp4) (27 s, silent; the typing is sped up in the GIF)
 
 | | Byte | Tempo |
 |---|---|---|

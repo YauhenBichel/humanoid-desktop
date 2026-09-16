@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>humanoid-desktop: a robot teammate on your Mac desktop</title>
+<meta name="description" content="A small robot teammate that floats on your Mac desktop. Type, or hold Option-Space and speak; it answers with its face, a speech bubble and its voice, using the language model you choose. Open source.">
+<link rel="canonical" href="https://yauhenbichel.github.io/humanoid-desktop/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="humanoid-desktop: a robot teammate on your Mac desktop">
+<meta property="og:description" content="Type, or hold Option-Space and speak. It answers with its face, a speech bubble and its voice, using the model you choose. Open source, Swift.">
+<meta property="og:url" content="https://yauhenbichel.github.io/humanoid-desktop/">
+<meta property="og:image" content="https://yauhenbichel.github.io/humanoid-desktop/media/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://yauhenbichel.github.io/humanoid-desktop/media/social-card.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='14' y='22' width='72' height='58' rx='14' fill='%2326463f'/><rect x='21' y='29' width='58' height='44' rx='9' fill='%23040c0a'/><rect x='33' y='40' width='9' height='14' rx='4.5' fill='%2378ffbe'/><rect x='58' y='40' width='9' height='14' rx='4.5' fill='%2378ffbe'/><rect x='47' y='6' width='6' height='16' fill='%2326463f'/><circle cx='50' cy='8' r='6' fill='%2378ffbe'/></svg>">
+<style>
+  :root {
+    --page: #f5faf7;
+    --text: #0f2a22;
+    --muted: #4c6b61;
+    --card: #ffffff;
+    --line: #d5e8df;
+    --accent: #0f8a5a;
+    --code: #eaf4ef;
+    --glow: #0f8a5a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #06100d;
+      --text: #d6ffea;
+      --muted: #9dc2b3;
+      --card: #0c1a16;
+      --line: #1d3a31;
+      --accent: #78ffbe;
+      --code: #0f221c;
+      --glow: #78ffbe;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #06100d;
+    --text: #d6ffea;
+    --muted: #9dc2b3;
+    --card: #0c1a16;
+    --line: #1d3a31;
+    --accent: #78ffbe;
+    --code: #0f221c;
+    --glow: #78ffbe;
+  }
+  * { box-sizing: border-box; }
+  /* Grid children and code blocks may shrink below their content, so nothing pushes the page sideways on a phone. */
+  header.hero > *, .grid > *, section, pre { min-width: 0; }
+  pre, table { max-width: 100%; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); }
+  main { max-width: 1040px; margin: 0 auto; padding: 0 16px 64px; }
+  header.hero {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 40px;
+    align-items: center;
+    padding: 56px 0 32px;
+  }
+  h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+  .lede { font-size: 20px; color: var(--muted); margin: 0 0 24px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+  .button {
+    display: inline-block;
+    padding: 11px 18px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: var(--card);
+  }
+  .button.primary { background: var(--accent); border-color: var(--accent); color: var(--page); }
+  .demo {
+    border-radius: 18px;
+    overflow: hidden;
+    border: 2px solid var(--glow);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    background: #000;
+  }
+  .demo video { display: block; width: 100%; height: auto; }
+  .caption { font-size: 14px; color: var(--muted); margin-top: 10px; text-align: center; }
+  section { padding: 36px 0 8px; border-top: 1px solid var(--line); margin-top: 28px; }
+  h2 { font-size: 28px; margin: 0 0 18px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid.two { grid-template-columns: repeat(2, 1fr); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); }
+  pre {
+    background: var(--code);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  footer { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+  @media (max-width: 800px) {
+    header.hero { grid-template-columns: 1fr; padding-top: 32px; }
+    .grid, .grid.two { grid-template-columns: 1fr; }
+    table { font-size: 14px; }
+    th, td { padding: 8px 6px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div>
+      <h1>A robot teammate on your Mac desktop</h1>
+      <p class="lede">A small robot floats above your windows, blinks and reacts. Click it and type, or hold <strong>⌥Space</strong> and just speak. It answers with its face, a speech bubble and its voice, using the language model <em>you</em> choose.</p>
+      <div class="buttons">
+        <a class="button primary" href="https://github.com/YauhenBichel/humanoid-desktop">View on GitHub</a>
+        <a class="button" href="#install">Install</a>
+      </div>
+    </div>
+    <div>
+      <div class="demo">
+        <video src="media/demo.mp4" poster="media/poster.jpg" autoplay muted loop playsinline controls aria-label="Byte, a green robot on the desktop, answers the question what is BFS algorithm"></video>
+      </div>
+      <p class="caption">Byte answering "what is BFS algorithm", recorded on a Mac (silent clip).</p>
+    </div>
+  </header>
+
+  <section>
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="card"><h3>Lives on your desktop</h3><p>A floating character on every Space. Drag it anywhere, close it with ×, ⌘W or Esc, and bring it back from the menu bar.</p></div>
+      <div class="card"><h3>Type or talk</h3><p>Click to type, or hold ⌥Space to speak. It answers out loud, and its mouth moves with its voice.</p></div>
+      <div class="card"><h3>Your model, your servers</h3><p>Any OpenAI-compatible chat, speech and transcription servers: Ollama, llama.cpp, vLLM, Kokoro, Whisper, or a router in front of them.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Teammates</h2>
+    <div class="grid two">
+      <div class="card"><h3>Byte</h3><p>Explains computer science: algorithms, data structures, complexity, one idea at a time with a small example. Green face, antenna.</p></div>
+      <div class="card"><h3>Tempo</h3><p>Loves music: songs, styles, rhythm and what a song is about. Pink face, headphones.</p></div>
+    </div>
+    <p>Make your own with one small file: a name, colours, antenna or headphones, a voice, and what it's for. The same file works in <a href="https://github.com/YauhenBichel/humanoid-companion">humanoid-companion</a>, a simulated humanoid that walks and talks.</p>
+<pre><code># ~/.config/humanoid-companion/teammates/nova.toml
+name = "Nova"
+tagline = "tells stories about space"
+based_on = "byte"
+voice = "af_sky"
+role = "Your role: you tell short, true stories about space."
+
+[colours]
+glow = "#9fd0ff"
+trim = "#2a3552"</code></pre>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <p>macOS 14 or later, with Xcode or the Swift 6 command-line tools.</p>
+<pre><code>git clone https://github.com/YauhenBichel/humanoid-desktop && cd humanoid-desktop
+scripts/build-app.sh --install
+open ~/Applications/HumanoidDesktop.app</code></pre>
+    <p>Then choose <strong>Open Settings File…</strong> from the menu bar item and point it at your servers:</p>
+<pre><code>[user]
+name = "Alex"
+language = "de"                          # optional: the teammate answers in German
+
+[llm]
+base_url = "http://127.0.0.1:11434/v1"   # Ollama
+model = "llama3.1:8b"
+
+[voice]
+tts_base_url = "http://127.0.0.1:8880/v1"   # Kokoro
+stt_base_url = "http://127.0.0.1:8000/v1"   # Whisper (Speaches)</code></pre>
+  </section>
+
+  <section>
+    <h2>Languages and platforms</h2>
+    <p>Set <code>language</code> and the teammate answers in it, with a voice per language if you give one. Stop words work in English and the answer language. The app's menus come from one strings file per language.</p>
+    <table>
+      <thead><tr><th>Part</th><th>macOS</th><th>Linux</th><th>Windows</th></tr></thead>
+      <tbody>
+        <tr><td>TeammateKit: settings, teammates, conversation, languages, clients</td><td>tested in CI</td><td>tested in CI</td><td>planned (<a href="https://github.com/YauhenBichel/humanoid-desktop/issues/11">#11</a>)</td></tr>
+        <tr><td>The desktop app</td><td>yes</td><td colspan="2">planned (<a href="https://github.com/YauhenBichel/humanoid-desktop/issues/12">#12</a>)</td></tr>
+      </tbody>
+    </table>
+    <p>More language models and systems are on the <a href="https://github.com/YauhenBichel/humanoid-desktop/issues/16">roadmap</a>: native Anthropic and Gemini support, Apple's on-device model, streaming replies, a settings window and signed releases.</p>
+  </section>
+</main>
+<footer>
+  Open source under Apache-2.0 · <a href="https://github.com/YauhenBichel/humanoid-desktop">github.com/YauhenBichel/humanoid-desktop</a><br>
+  The teammate is a language model with a face. It can be wrong, so check what matters. It is not a medical, therapy or care product. Not affiliated with Apple.
+</footer>
+</body>
+</html>
