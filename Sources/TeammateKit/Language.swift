@@ -9,7 +9,7 @@ public struct Language: Hashable, Sendable {
 
     /// Stop words in languages the teammate knows, besides English (which always works). Only words that mean
     /// "stop" or "be quiet" and little else, so an ordinary sentence does not silence the teammate.
-    private static let stopWordsByLanguage: [String: Set<String>] = [
+    private static let stopWordTable: [String: Set<String>] = [
         "en": ["stop", "halt", "freeze", "estop", "e-stop", "quiet", "shush"],
         "de": ["stopp", "ruhe", "aufhören"],
         "fr": ["arrête", "arrêtez", "silence", "stop"],
@@ -43,6 +43,6 @@ public struct Language: Hashable, Sendable {
     }
 
     public var stopWords: Set<String> {
-        Self.stopWordsByLanguage["en", default: []].union(Self.stopWordsByLanguage[baseCode, default: []])
+        Self.stopWordTable["en", default: []].union(Self.stopWordTable[baseCode, default: []])
     }
 }

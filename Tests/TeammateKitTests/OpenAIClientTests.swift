@@ -3,6 +3,10 @@ import Testing
 
 @testable import TeammateKit
 
+#if canImport(FoundationNetworking)
+    import FoundationNetworking  // URLRequest and HTTPURLResponse on Linux and Windows
+#endif
+
 /// Answers every request with one status and body, and keeps the last request.
 final class RecordingTransport: HTTPTransport, @unchecked Sendable {
     private let status: Int
