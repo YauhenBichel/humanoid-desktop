@@ -64,16 +64,14 @@ public protocol MemoryStore: Sendable {
     func erase(teammateKey: String) throws
 }
 
-public struct MemoryStoreError: Error, Equatable, Sendable, CustomStringConvertible {
-    public let description: String
-}
-
-/// Memory as one JSON file per teammate, written atomically and readable only by the owner of the account.
+/// Memory as one JSON file per teammate, readable only by the owner of the account.
 public struct FileMemoryStore: MemoryStore {
-    public let folder: URL
+    private let files: PrivateJSONFiles
+
+    public var folder: URL { files.folder }
 
     public init(folder: URL) {
-        self.folder = folder
+        files = PrivateJSONFiles(folder: folder)
     }
 
     /// `<settings folder>/memory`.
@@ -83,47 +81,20 @@ public struct FileMemoryStore: MemoryStore {
     }
 
     public func load(teammateKey: String) throws -> TeammateMemory {
-        let file = try url(for: teammateKey)
-        guard FileManager.default.fileExists(atPath: file.path) else { return TeammateMemory() }
-        let memory = try decoder.decode(TeammateMemory.self, from: Data(contentsOf: file))
+        guard let memory = try files.read(TeammateMemory.self, key: teammateKey) else { return TeammateMemory() }
         guard memory.version <= TeammateMemory.formatVersion else {
-            throw MemoryStoreError(description: "\(file.path) was written by a newer version (\(memory.version))")
+            throw StoreError(
+                description:
+                    "\(try files.url(for: teammateKey).path) was written by a newer version (\(memory.version))")
         }
         return memory
     }
 
     public func save(_ memory: TeammateMemory, teammateKey: String) throws {
-        let file = try url(for: teammateKey)
-        try FileManager.default.createDirectory(
-            at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        try encoder.encode(memory).write(to: file, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        try files.write(memory, key: teammateKey)
     }
 
     public func erase(teammateKey: String) throws {
-        let file = try url(for: teammateKey)
-        if FileManager.default.fileExists(atPath: file.path) {
-            try FileManager.default.removeItem(at: file)
-        }
-    }
-
-    private func url(for teammateKey: String) throws -> URL {
-        guard teammateKey.range(of: "^[a-z0-9][a-z0-9-]*$", options: .regularExpression) != nil else {
-            throw MemoryStoreError(description: "not a teammate key: \(teammateKey)")
-        }
-        return folder.appendingPathComponent("\(teammateKey).json")
-    }
-
-    private var encoder: JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
-        return encoder
-    }
-
-    private var decoder: JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return decoder
+        try files.remove(key: teammateKey)
     }
 }

@@ -12,14 +12,14 @@ final class MemoryShelf: MemoryStore, @unchecked Sendable {
     func load(teammateKey: String) throws -> TeammateMemory {
         lock.lock()
         defer { lock.unlock() }
-        if failing { throw MemoryStoreError(description: "disk full") }
+        if failing { throw StoreError(description: "disk full") }
         return memories[teammateKey] ?? TeammateMemory()
     }
 
     func save(_ memory: TeammateMemory, teammateKey: String) throws {
         lock.lock()
         defer { lock.unlock() }
-        if failing { throw MemoryStoreError(description: "disk full") }
+        if failing { throw StoreError(description: "disk full") }
         memories[teammateKey] = memory
     }
 
@@ -69,14 +69,14 @@ final class MemoryShelf: MemoryStore, @unchecked Sendable {
         #expect(permissions == 0o600)
         try store.erase(teammateKey: "byte")
         #expect(!FileManager.default.fileExists(atPath: file.path))
-        #expect(throws: MemoryStoreError.self) { try store.save(memory, teammateKey: "../escape") }
+        #expect(throws: StoreError.self) { try store.save(memory, teammateKey: "../escape") }
     }
 
     @Test func aMemoryFromANewerVersionIsNotMisread() throws {
         let store = FileMemoryStore(folder: temporaryFolder())
         try #"{"version": 99, "facts": [], "summary": "", "recent": []}"#.write(
             to: store.folder.appendingPathComponent("byte.json"), atomically: true, encoding: .utf8)
-        #expect(throws: MemoryStoreError.self) { try store.load(teammateKey: "byte") }
+        #expect(throws: StoreError.self) { try store.load(teammateKey: "byte") }
     }
 }
 
