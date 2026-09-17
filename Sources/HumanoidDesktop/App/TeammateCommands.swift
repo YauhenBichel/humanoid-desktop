@@ -5,6 +5,7 @@ struct TeammateCommands {
     var toggleTeammate: () -> Void
     var hideTeammate: () -> Void
     var typeMessage: () -> Void
+    var forgetMemory: () -> Void
     var openSettings: () -> Void
     var reload: () -> Void
     var quit: () -> Void

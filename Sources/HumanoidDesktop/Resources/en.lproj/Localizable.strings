@@ -7,10 +7,17 @@
 "menu.show" = "Show %@";
 "menu.typeMessage" = "Type a Message";
 "menu.talkHint" = "Talk: hold %@";
+"menu.forgetMemory" = "Forget What %@ Remembers…";
 "menu.openSettings" = "Open Settings File…";
 "menu.reload" = "Reload Settings and Teammates";
 "menu.quit" = "Quit Humanoid Desktop";
 "statusItem.description" = "Humanoid teammate";
+
+/* Asking before forgetting */
+"alert.forgetMemory.title" = "Forget what %@ remembers?";
+"alert.forgetMemory.detail" = "%@ forgets the facts you shared and your earlier conversations. This cannot be undone.";
+"alert.forget" = "Forget";
+"alert.cancel" = "Cancel";
 
 /* The teammate's window */
 "window.characterHelp" = "%1$@: click to type, hold %2$@ to talk, right-click for more";
@@ -34,3 +41,5 @@
 "phrase.speechServerFailed" = "No voice: the speech server at %@ did not answer.";
 "phrase.transcriptionServerFailed" = "No transcription from %1$@: %2$@";
 "phrase.microphoneFailed" = "Could not start the microphone: %@";
+"phrase.forgotten" = "Done: I forgot everything I remembered. I'm %@, nice to meet you!";
+"phrase.memoryFailed" = "Could not keep what I remember: %@";

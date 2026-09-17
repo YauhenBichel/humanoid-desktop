@@ -24,6 +24,25 @@ enum AppText {
         String(localized: "menu.talkHint", defaultValue: "Talk: hold \(shortcut)", bundle: .module)
     }
 
+    static func forgetMemory(_ name: String) -> String {
+        String(localized: "menu.forgetMemory", defaultValue: "Forget What \(name) Remembers…", bundle: .module)
+    }
+
+    static func forgetMemoryQuestion(_ name: String) -> String {
+        String(localized: "alert.forgetMemory.title", defaultValue: "Forget what \(name) remembers?", bundle: .module)
+    }
+
+    static func forgetMemoryDetail(_ name: String) -> String {
+        String(
+            localized: "alert.forgetMemory.detail",
+            defaultValue:
+                "\(name) forgets the facts you shared and your earlier conversations. This cannot be undone.",
+            bundle: .module)
+    }
+
+    static var forget: String { String(localized: "alert.forget", defaultValue: "Forget", bundle: .module) }
+    static var cancel: String { String(localized: "alert.cancel", defaultValue: "Cancel", bundle: .module) }
+
     static var openSettings: String {
         String(localized: "menu.openSettings", defaultValue: "Open Settings File…", bundle: .module)
     }
@@ -113,6 +132,17 @@ enum AppText {
             microphoneFailed: { reason in
                 String(
                     localized: "phrase.microphoneFailed", defaultValue: "Could not start the microphone: \(reason)",
+                    bundle: .module)
+            },
+            forgotten: { teammate in
+                String(
+                    localized: "phrase.forgotten",
+                    defaultValue: "Done: I forgot everything I remembered. I'm \(teammate.name), nice to meet you!",
+                    bundle: .module)
+            },
+            memoryFailed: { reason in
+                String(
+                    localized: "phrase.memoryFailed", defaultValue: "Could not keep what I remember: \(reason)",
                     bundle: .module)
             }
         )

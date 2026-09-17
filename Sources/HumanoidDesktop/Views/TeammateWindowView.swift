@@ -64,6 +64,7 @@ struct TeammateWindowView: View {
         }
         Divider()
         Button(AppText.hide(session.teammate.name), action: commands.hideTeammate)
+        Button(AppText.forgetMemory(session.teammate.name), action: commands.forgetMemory)
         Button(AppText.openSettings, action: commands.openSettings)
         Button(AppText.reload, action: commands.reload)
         Divider()

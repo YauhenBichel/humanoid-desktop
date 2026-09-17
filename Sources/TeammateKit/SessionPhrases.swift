@@ -16,6 +16,8 @@ public struct SessionPhrases: Sendable {
     public var speechServerFailed: @Sendable (_ server: String) -> String
     public var transcriptionServerFailed: @Sendable (_ server: String, _ reason: String) -> String
     public var microphoneFailed: @Sendable (_ reason: String) -> String
+    public var forgotten: @Sendable (_ teammate: Teammate) -> String
+    public var memoryFailed: @Sendable (_ reason: String) -> String
 
     public init(
         thinking: String,
@@ -30,7 +32,9 @@ public struct SessionPhrases: Sendable {
         chatServerFailed: @escaping @Sendable (_ server: String, _ reason: String) -> String,
         speechServerFailed: @escaping @Sendable (_ server: String) -> String,
         transcriptionServerFailed: @escaping @Sendable (_ server: String, _ reason: String) -> String,
-        microphoneFailed: @escaping @Sendable (_ reason: String) -> String
+        microphoneFailed: @escaping @Sendable (_ reason: String) -> String,
+        forgotten: @escaping @Sendable (_ teammate: Teammate) -> String,
+        memoryFailed: @escaping @Sendable (_ reason: String) -> String
     ) {
         self.thinking = thinking
         self.listening = listening
@@ -45,6 +49,8 @@ public struct SessionPhrases: Sendable {
         self.speechServerFailed = speechServerFailed
         self.transcriptionServerFailed = transcriptionServerFailed
         self.microphoneFailed = microphoneFailed
+        self.forgotten = forgotten
+        self.memoryFailed = memoryFailed
     }
 
     public static let english = SessionPhrases(
@@ -62,6 +68,8 @@ public struct SessionPhrases: Sendable {
         chatServerFailed: { server, reason in "No answer from the chat server at \(server): \(reason)" },
         speechServerFailed: { server in "No voice: the speech server at \(server) did not answer." },
         transcriptionServerFailed: { server, reason in "No transcription from \(server): \(reason)" },
-        microphoneFailed: { reason in "Could not start the microphone: \(reason)" }
+        microphoneFailed: { reason in "Could not start the microphone: \(reason)" },
+        forgotten: { teammate in "Done: I forgot everything I remembered. I'm \(teammate.name), nice to meet you!" },
+        memoryFailed: { reason in "Could not keep what I remember: \(reason)" }
     )
 }
