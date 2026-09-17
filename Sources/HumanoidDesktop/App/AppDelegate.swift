@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let session = TeammateSession(
         player: AudioPlayer(), recorder: AudioRecorder(), choices: UserDefaultsChoiceStore(),
         memories: FileMemoryStore.standard(),
+        progressStore: FileProgressStore.standard(),
         phrases: AppText.sessionPhrases(shortcut: AppDelegate.talkCombination.displayName))
     private var panel: TeammatePanel?
     private var statusMenu: StatusMenu?

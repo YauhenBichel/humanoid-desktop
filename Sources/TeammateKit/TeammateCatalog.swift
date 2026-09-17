@@ -72,6 +72,12 @@ public enum TeammateFile {
         teammate.tagline = table["tagline"]?.string ?? teammate.tagline
         teammate.voice = table["voice"]?.string ?? teammate.voice
         teammate.role = table["role"]?.string ?? teammate.role
+        if let course = table["course"]?.string {
+            guard course.isEmpty || PrivateJSONFiles.isKey(course) else {
+                throw failure("course must be a course key like cs-foundations, or \"\" for none")
+            }
+            teammate.course = course.isEmpty ? nil : course
+        }
         if let word = table["accessory"]?.string {
             guard let accessory = Accessory(rawValue: word) else {
                 throw failure("accessory must be one of \(Accessory.allCases.map(\.rawValue).joined(separator: ", "))")

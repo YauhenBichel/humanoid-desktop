@@ -40,6 +40,39 @@ enum AppText {
             bundle: .app)
     }
 
+    static func lessonsMenu(_ course: String) -> String {
+        String(localized: "menu.lessons", defaultValue: "Lessons: \(course)", bundle: .app)
+    }
+
+    static func nextLesson(_ lesson: String) -> String {
+        String(localized: "menu.nextLesson", defaultValue: "Next Lesson: \(lesson)", bundle: .app)
+    }
+
+    static var everyLessonFinished: String {
+        String(localized: "menu.everyLessonFinished", defaultValue: "Every Lesson Finished", bundle: .app)
+    }
+
+    static func review(due: Int) -> String {
+        String(localized: "menu.review", defaultValue: "Review \(due) Due Questions", bundle: .app)
+    }
+
+    static var nothingToReview: String {
+        String(localized: "menu.nothingToReview", defaultValue: "Nothing to Review Yet", bundle: .app)
+    }
+
+    static var endLesson: String {
+        String(localized: "menu.endLesson", defaultValue: "End Lesson", bundle: .app)
+    }
+
+    /// "Big-O notation · question 2 of 3", or "Review · question 2 of 5".
+    static func studyStatus(_ status: TeammateSession.StudyStatus) -> String {
+        let name = status.lessonTitle ?? String(localized: "study.review", defaultValue: "Review", bundle: .app)
+        guard let question = status.question else { return name }
+        return String(
+            localized: "study.question", defaultValue: "\(name) · question \(question) of \(status.questionCount)",
+            bundle: .app)
+    }
+
     static var forget: String { String(localized: "alert.forget", defaultValue: "Forget", bundle: .app) }
     static var cancel: String { String(localized: "alert.cancel", defaultValue: "Cancel", bundle: .app) }
 
@@ -143,6 +176,38 @@ enum AppText {
             memoryFailed: { reason in
                 String(
                     localized: "phrase.memoryFailed", defaultValue: "Could not keep what I remember: \(reason)",
+                    bundle: .app)
+            },
+            nothingToReview: String(
+                localized: "phrase.nothingToReview",
+                defaultValue: "Nothing to review right now: you remember it all. Let's learn something new!",
+                bundle: .app),
+            question: { number, count, ask in
+                String(
+                    localized: "phrase.question", defaultValue: "Question \(number) of \(count): \(ask)",
+                    bundle: .app)
+            },
+            studyEnded: String(
+                localized: "phrase.studyEnded", defaultValue: "Okay, we'll stop here. Your progress is saved.",
+                bundle: .app),
+            courseFinished: { course in
+                String(
+                    localized: "phrase.courseFinished",
+                    defaultValue: "You finished every lesson of \(course)! We can review any time.", bundle: .app)
+            },
+            lessonFinished: { lesson, correct, total in
+                String(
+                    localized: "phrase.lessonFinished",
+                    defaultValue: "Lesson \(lesson) done: \(correct) of \(total) right.", bundle: .app)
+            },
+            reviewFinished: { correct, total in
+                String(
+                    localized: "phrase.reviewFinished", defaultValue: "Review done: \(correct) of \(total) right.",
+                    bundle: .app)
+            },
+            progressFailed: { reason in
+                String(
+                    localized: "phrase.progressFailed", defaultValue: "Could not keep your lesson progress: \(reason)",
                     bundle: .app)
             }
         )

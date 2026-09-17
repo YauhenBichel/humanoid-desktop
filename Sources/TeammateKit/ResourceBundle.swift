@@ -11,4 +11,6 @@ extension Bundle {
         }
         return fallback()
     }
+
+    static let teammateKit = packaged("humanoid-desktop_TeammateKit", fallback: .module)
 }

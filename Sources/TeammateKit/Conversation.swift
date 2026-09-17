@@ -108,6 +108,8 @@ public actor Conversation {
 
     public let teammate: Teammate
     public private(set) var memory: TeammateMemory
+    /// How the person is doing in the teammate's course, for the prompt; nil when there is nothing to say.
+    public private(set) var studyNote: String?
     private let userName: String
     private let language: Language?
     private let phrases: SessionPhrases
@@ -121,6 +123,7 @@ public actor Conversation {
         language: Language? = nil,
         phrases: SessionPhrases = .english,
         memory: TeammateMemory = TeammateMemory(),
+        studyNote: String? = nil,
         chat: any ChatCompleting
     ) {
         self.teammate = teammate
@@ -128,6 +131,7 @@ public actor Conversation {
         self.language = language
         self.phrases = phrases
         self.memory = memory
+        self.studyNote = studyNote
         self.chat = chat
     }
 
@@ -143,7 +147,7 @@ public actor Conversation {
         do {
             let reply = try ReplyRules.reply(
                 fromModelAnswer: try await chat.complete(messages, schema: ReplyRules.schema))
-            await remember(said: text, reply: reply)
+            await note(said: text, reply: reply)
             return reply
         } catch {
             return Reply(say: phrases.noAnswer, expression: .sad, source: .failure(String(describing: error)))
@@ -155,11 +159,17 @@ public actor Conversation {
         return [
             teammate.persona(userName: userName, language: language),
             memory.promptSection(personName: person),
+            studyNote,
             ReplyRules.rememberInstruction,
         ].compactMap { $0 }.joined(separator: "\n\n")
     }
 
-    private func remember(said: String, reply: Reply) async {
+    public func update(studyNote: String?) {
+        self.studyNote = studyNote
+    }
+
+    /// Adds a turn to what the teammate remembers: from this conversation, or from a lesson with its tutor.
+    func note(said: String, reply: Reply) async {
         memory.learn(reply.remember)
         let answer = #"{"say": \#(jsonString(reply.say)), "expression": "\#(reply.expression.rawValue)"}"#
         memory.recent += [ChatMessage(.user, said), ChatMessage(.assistant, answer)]

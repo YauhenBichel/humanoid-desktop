@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Everything a teammate is doing, and the only place that decides what happens next: answering a message,
-/// speaking, listening while the talk shortcut is held, switching teammates. The app's views show this state
+/// speaking, listening while the talk shortcut is held, switching teammates, teaching. The app's views show this state
 /// and call these methods; the services it uses are injected, so every flow is tested without a server,
 /// a speaker or a microphone.
 @MainActor
@@ -10,6 +10,15 @@ import Observation
 public final class TeammateSession {
     public enum Activity: Equatable, Sendable {
         case idle, thinking, speaking, listening, transcribing
+    }
+
+    /// A lesson or review in progress.
+    public struct StudyStatus: Equatable, Sendable {
+        /// Nil for a review.
+        public var lessonTitle: String?
+        /// 1-based, while a question is waiting for its answer.
+        public var question: Int?
+        public var questionCount: Int
     }
 
     /// The servers a teammate talks to.
@@ -40,6 +49,11 @@ public final class TeammateSession {
     /// A problem worth showing: a server that does not answer, a broken file, a missing permission.
     public private(set) var notice = ""
     public private(set) var activity: Activity = .idle
+    /// The course the current teammate teaches, and how far the person is in it; nil for a teammate without one.
+    public private(set) var course: Course?
+    public private(set) var progress: StudyProgress?
+    /// The lesson or review in progress; nil while just talking.
+    public private(set) var study: StudyStatus?
     public var draft = ""
     public var isChatOpen = false
 
@@ -49,11 +63,14 @@ public final class TeammateSession {
     @ObservationIgnored private var settings: TeammateSettings = .defaults
     @ObservationIgnored private var services: Services
     @ObservationIgnored private var conversation: Conversation
+    @ObservationIgnored private var courses: CourseCatalog = .builtIn
+    @ObservationIgnored private var tutor: Tutor?
     @ObservationIgnored private let makeServices: (TeammateSettings) -> Services
     @ObservationIgnored private let player: any AudioPlaying
     @ObservationIgnored private let recorder: any AudioRecording
     @ObservationIgnored private let choices: any TeammateChoiceStore
     @ObservationIgnored private let memories: any MemoryStore
+    @ObservationIgnored private let progressStore: any ProgressStore
     @ObservationIgnored private let phrases: SessionPhrases
     @ObservationIgnored private var work: Task<Void, Never>?
     /// Increases whenever what the teammate is doing is interrupted; late results from earlier turns are dropped.
@@ -66,6 +83,7 @@ public final class TeammateSession {
         recorder: any AudioRecording,
         choices: any TeammateChoiceStore,
         memories: any MemoryStore,
+        progressStore: any ProgressStore,
         phrases: SessionPhrases = .english,
         makeServices: @escaping (TeammateSettings) -> Services = Services.openAICompatible
     ) {
@@ -73,6 +91,7 @@ public final class TeammateSession {
         self.recorder = recorder
         self.choices = choices
         self.memories = memories
+        self.progressStore = progressStore
         self.phrases = phrases
         self.makeServices = makeServices
         let services = makeServices(.defaults)
@@ -86,6 +105,7 @@ public final class TeammateSession {
     public func configure(with library: TeammateLibrary) {
         settings = library.settings
         catalog = library.catalog
+        courses = library.courses
         services = makeServices(library.settings)
         notice = library.problems.joined(separator: "\n")
         let remembered = choices.chosenKey.flatMap(catalog.teammate(key:))
@@ -102,11 +122,33 @@ public final class TeammateSession {
         } catch {
             addNotice(phrases.memoryFailed(String(describing: error)))
         }
+        loadCourse(of: newTeammate)
         conversation = Conversation(
             teammate: newTeammate, userName: settings.userName, language: settings.language, phrases: phrases,
-            memory: memory, chat: services.chat)
+            memory: memory, studyNote: studyNote, chat: services.chat)
         expression = newTeammate.restingExpression
         bubble = phrases.greeting(settings.userName, newTeammate)
+    }
+
+    private func loadCourse(of teammate: Teammate) {
+        tutor = nil
+        study = nil
+        course = teammate.course.flatMap(courses.course(key:))
+        guard let course else {
+            progress = nil
+            return
+        }
+        do {
+            progress = try progressStore.load(courseKey: course.key)
+        } catch {
+            progress = StudyProgress(course: course.key)
+            addNotice(phrases.progressFailed(String(describing: error)))
+        }
+    }
+
+    private var studyNote: String? {
+        guard let course, let progress else { return nil }
+        return progress.promptSection(course: course, at: Date())
     }
 
     /// Shows a problem below any already shown (a settings file with a mistake, say), once.
@@ -127,7 +169,7 @@ public final class TeammateSession {
         }
         conversation = Conversation(
             teammate: teammate, userName: settings.userName, language: settings.language, phrases: phrases,
-            chat: services.chat)
+            studyNote: studyNote, chat: services.chat)
         expression = .happy
         bubble = phrases.forgotten(teammate)
     }
@@ -145,11 +187,17 @@ public final class TeammateSession {
         expression = .thinking
         bubble = phrases.thinking
         let conversation = self.conversation
+        let tutor = self.tutor
         work = Task { [weak self] in
-            let reply = await conversation.respond(to: said)
+            let reply =
+                if let tutor { await tutor.respond(to: said) } else { await conversation.respond(to: said) }
             guard let self, self.isCurrent(turn) else { return }
             self.show(reply)
             if reply.source == .model {
+                if let tutor {
+                    await conversation.note(said: said, reply: reply)
+                    await self.keepProgress(of: tutor, conversation: conversation)
+                }
                 await self.keepMemory(of: conversation)
             }
             if reply.source == .stopWord {
@@ -196,6 +244,86 @@ public final class TeammateSession {
             voiceLevel = 0
             activity = .idle
         }
+    }
+
+    // MARK: Studying
+
+    /// Starts a lesson of the teammate's course: the one given, or the first not finished yet.
+    public func startLesson(_ lesson: Course.Lesson? = nil) {
+        guard let course, let progress else { return }
+        guard let lesson = lesson ?? progress.nextLesson(in: course) else {
+            interrupt()
+            expression = .happy
+            bubble = phrases.courseFinished(course.title)
+            return
+        }
+        beginStudy(.lesson(lesson))
+    }
+
+    /// Asks the questions that are due again, the longest overdue first.
+    public func startReview() {
+        guard let course, let progress else { return }
+        beginStudy(.review(progress.due(in: course, at: Date())))
+    }
+
+    /// Stops the lesson or review; what was answered so far is already saved.
+    public func endStudy() {
+        guard tutor != nil else { return }
+        interrupt()
+        tutor = nil
+        study = nil
+        expression = teammate.restingExpression
+        bubble = phrases.studyEnded
+    }
+
+    private func beginStudy(_ plan: Tutor.Plan) {
+        guard let course, let progress else { return }
+        let turn = interrupt()
+        tutor = nil
+        study = nil
+        activity = .thinking
+        expression = .thinking
+        bubble = phrases.thinking
+        let conversation = self.conversation
+        let persona = teammate.persona(userName: settings.userName, language: settings.language)
+        let (userName, language, chat) = (settings.userName, settings.language, services.chat)
+        let phrases = self.phrases
+        work = Task { [weak self] in
+            let background = await conversation.memory.promptSection(
+                personName: userName.isEmpty ? "the person" : userName)
+            let tutor = Tutor(
+                course: course, plan: plan, progress: progress, persona: persona, background: background,
+                language: language, phrases: phrases, chat: chat)
+            let reply = await tutor.begin()
+            guard let self, self.isCurrent(turn) else { return }
+            self.tutor = tutor
+            self.show(reply)
+            await self.keepProgress(of: tutor, conversation: conversation)
+            await self.speak(reply.say, turn: turn)
+        }
+    }
+
+    /// Saves the tutor's progress, shows where the lesson is, and returns to talking when it is over.
+    private func keepProgress(of tutor: Tutor, conversation: Conversation) async {
+        let latest = await tutor.progress
+        if latest != progress {
+            progress = latest
+            do {
+                try progressStore.save(latest)
+            } catch {
+                addNotice(phrases.progressFailed(String(describing: error)))
+            }
+        }
+        guard self.tutor === tutor else { return }
+        if await tutor.isFinished {
+            self.tutor = nil
+            study = nil
+            await conversation.update(studyNote: studyNote)
+            return
+        }
+        let question: Int? = if case .asking(let index) = await tutor.step { index + 1 } else { nil }
+        study = StudyStatus(
+            lessonTitle: await tutor.lessonTitle, question: question, questionCount: await tutor.questionCount)
     }
 
     // MARK: Hold to talk

@@ -1,0 +1,230 @@
+{
+  "key": "cs-foundations",
+  "title": "Computer science foundations",
+  "lessons": [
+    {
+      "key": "big-o",
+      "title": "Big-O notation",
+      "goal": "Describe how an algorithm's resource use grows with input size using Big-O categories",
+      "points": [
+        "Big-O notation describes how an algorithm's running time or memory use scales as the input size grows, focusing on the dominant term and ignoring constants. For example, an algorithm that checks every item in a list of size n has O(n) time, meaning doubling the list roughly doubles the time.",
+        "Common Big-O categories include O(1) for constant time, like accessing an array element by index, and O(log n) for logarithmic time, like binary search where each step halves the search space.",
+        "O(n^2) describes quadratic time, as in simple bubble sort that compares each pair of items, meaning ten times more items take about one hundred times longer.",
+        "O(n log n) appears in efficient sorting algorithms like merge sort, where the work grows slightly faster than linear but much slower than quadratic."
+      ],
+      "questions": [
+        {
+          "key": "q1",
+          "ask": "What does O(n) mean for an algorithm's running time?",
+          "answer": "O(n) means the running time grows linearly with the input size n; if n doubles, the time roughly doubles. A partly correct answer might say 'proportional' without mentioning doubling or scaling behavior."
+        },
+        {
+          "key": "q2",
+          "ask": "Why is binary search O(log n)?",
+          "answer": "Binary search halves the search space with each comparison, so after k steps the remaining size is n/(2^k), and it finishes when this reaches 1, meaning k is about log₂ n. A partly correct answer might mention halving but omit the logarithm relationship."
+        },
+        {
+          "key": "q3",
+          "ask": "How does O(n log n) differ from O(n²) as n gets large?",
+          "answer": "O(n log n) grows much more slowly than O(n²); for n=1000, n log n is about 10,000 while n² is 1,000,000. A partly correct answer might say 'faster' but not quantify the difference or mention specific examples."
+        }
+      ]
+    },
+    {
+      "key": "arrays-and-linked-lists",
+      "title": "Arrays and linked lists",
+      "goal": "Compare arrays and linked lists in terms of access time, insertion time, and memory layout",
+      "points": [
+        "An array stores elements in contiguous memory, allowing O(1) access by index because the address is calculated directly from the base plus offset. For example, accessing the 5th element takes the same time regardless of array size.",
+        "A linked list stores elements in nodes connected by pointers, so accessing the 5th element requires following pointers from the head, taking O(n) time in the worst case.",
+        "Appending to a dynamic array is O(1) on average, called amortized: now and then the array is full and every element is copied into a bigger one, which takes O(n). Adding at the head of a linked list is always O(1): the new node just points at the old head.",
+        "Removing an element from the middle of an array shifts every later element one place left, which is O(n). A linked list only relinks pointers, O(1), once you hold the node before it, or the node itself in a doubly linked list; finding that node is still O(n)."
+      ],
+      "questions": [
+        {
+          "key": "q1",
+          "ask": "Why is reading an element by index O(1) in an array?",
+          "answer": "Because the memory address is computed as base_address + index × element_size, a direct calculation that takes constant time regardless of array size. A partly correct answer might mention 'contiguous memory' but not the address calculation."
+        },
+        {
+          "key": "q2",
+          "ask": "What is the time complexity to insert an element at the beginning of a linked list?",
+          "answer": "It is O(1) because you create a new node, point its next to the current head, and update the head pointer—no traversal needed. A partly correct answer might say 'fast' but not specify constant time or miss the pointer updates."
+        },
+        {
+          "key": "q3",
+          "ask": "Why does removing from the middle of an array take O(n) time?",
+          "answer": "Because all elements after the removed position must be shifted left by one position to fill the gap, which can require moving up to n−1 elements. A partly correct answer might mention shifting but not the worst-case linear cost."
+        }
+      ]
+    },
+    {
+      "key": "stacks-and-queues",
+      "title": "Stacks and queues",
+      "goal": "Explain the difference between LIFO stack and FIFO queue operations and their typical uses",
+      "points": [
+        "A stack follows LIFO (last in, first out) order, with push to add and pop to remove both happening at the top, like a stack of plates where you add or take from the top.",
+        "A queue follows FIFO (first in, first out) order, with enqueue to add at the rear and dequeue to remove from the front, like a line at a ticket counter.",
+        "Stacks are ideal for undo-redo operations, function call management, and expression evaluation where the most recent item must be processed first.",
+        "Queues are ideal for task scheduling, breadth-first search, and any scenario where items must be processed in the order they arrived."
+      ],
+      "questions": [
+        {
+          "key": "q1",
+          "ask": "You push 1, then 2, then 3 onto a stack, and pop once. Which number comes out, and why?",
+          "answer": "3, because a stack is last in, first out: the most recently pushed item leaves first. A partly correct answer names 3 without the last-in-first-out reason; 1 is the queue's answer and is wrong."
+        },
+        {
+          "key": "q2",
+          "ask": "In what order are elements removed from a queue?",
+          "answer": "Elements are removed in the same order they were added, first in, first out (FIFO); the earliest enqueue is the first to dequeue. A partly correct answer might mention 'order' but not specify FIFO or confuse it with LIFO."
+        },
+        {
+          "key": "q3",
+          "ask": "Why is a stack suitable for checking matched parentheses in an expression?",
+          "answer": "Because each opening parenthesis is pushed onto the stack, and each closing parenthesis causes a pop—matching succeeds only if the popped parenthesis is the corresponding opening and the stack ends empty. A partly correct answer might mention 'matching' but not explain the push/pop mechanism."
+        }
+      ]
+    },
+    {
+      "key": "hash-tables",
+      "title": "Hash tables",
+      "goal": "Describe how hash tables map keys to values and explain average versus worst-case performance",
+      "points": [
+        "A hash table uses a hash function to convert a key into an index into an underlying array, allowing average O(1) time for insertions, deletions, and lookups.",
+        "When two keys hash to the same index—a collision—solutions include chaining (storing a list at each index) or open addressing (finding another slot), both affecting performance.",
+        "The average case for basic operations is O(1), assuming a good hash function that distributes keys uniformly and keeps load factor bounded.",
+        "Worst-case time can be O(n) if all keys collide into the same bucket, for example if the hash function is poor or adversarial inputs are used."
+      ],
+      "questions": [
+        {
+          "key": "q1",
+          "ask": "What is the average time to look up a key in a hash table?",
+          "answer": "Average O(1) time because the hash function computes the bucket index directly, and with uniform hashing, each bucket contains only a few elements. A partly correct answer might say 'fast' but not specify average case or O(1)."
+        },
+        {
+          "key": "q2",
+          "ask": "What causes collisions in a hash table, and how does chaining handle them?",
+          "answer": "Collisions occur when different keys produce the same hash index; chaining stores multiple items in a linked list at that index, so lookup then requires scanning the list. A partly correct answer might describe collision but not explain chaining's list-based solution."
+        },
+        {
+          "key": "q3",
+          "ask": "Why can hash table operations degrade to O(n) time?",
+          "answer": "When many keys hash to the same bucket—poor hash function or adversarial data—operations on that bucket become linear in the number of colliding keys, up to n in the worst case. A partly correct answer might mention 'slowdown' but not attribute it specifically to collisions in one bucket."
+        }
+      ]
+    },
+    {
+      "key": "binary-search",
+      "title": "Binary search",
+      "goal": "Explain the requirements and time complexity of binary search and why it is faster than linear search",
+      "points": [
+        "Binary search requires the input to be sorted and repeatedly halves the search space by comparing the target to the middle element, discarding half of the remaining elements each step.",
+        "Starting with n elements, after one comparison n/2 remain, after two n/4, and so on, stopping when the search space is size 1, which takes about log₂ n comparisons.",
+        "Each step is O(1) work, so the total time is O(log n), much faster than linear search's O(n) for large inputs—for example, 1,000,000 elements need about 20 comparisons instead of 1,000,000.",
+        "Binary search only works on sorted data; if the data changes frequently, maintaining sort order can be costly, so other structures like balanced trees may be better."
+      ],
+      "questions": [
+        {
+          "key": "q1",
+          "ask": "What condition must the input data satisfy for binary search to work correctly?",
+          "answer": "The data must be sorted according to the same ordering used for comparison; otherwise, halving the search space may discard the target interval. A partly correct answer might say 'sorted' but not specify the ordering must match the comparison method."
+        },
+        {
+          "key": "q2",
+          "ask": "Why does binary search take O(log n) time instead of O(n)?",
+          "answer": "Because each comparison eliminates half of the remaining elements, so the number of comparisons needed is the number of times n can be halved until reaching 1, which is log₂ n. A partly correct answer might mention 'halving' but not relate it to the logarithm."
+        },
+        {
+          "key": "q3",
+          "ask": "How many comparisons would binary search need in the worst case for a list of 1,000 elements?",
+          "answer": "About 10 comparisons, since 2¹⁰ = 1,024, so log₂ 1,000 is just under 10. A partly correct answer might guess 100 or 500, misunderstanding the logarithmic scaling."
+        }
+      ]
+    },
+    {
+      "key": "recursion",
+      "title": "Recursion",
+      "goal": "Explain recursion, its components, and how call stack depth affects performance",
+      "points": [
+        "Recursion is a function that calls itself, with a base case to stop and a recursive case that reduces the problem toward the base, such as computing factorial where n! = n × (n−1)! and 0! = 1.",
+        "Each recursive call adds a frame to the call stack, storing the return address and local variables, so deep recursion can exhaust stack space and cause a stack overflow.",
+        "The time complexity often matches the number of calls—for factorial it is O(n) because there are n calls—but some recursions, like divide-and-conquer mergesort, achieve O(n log n) by splitting the problem.",
+        "Tail call optimization, in languages that do it, reuses the current frame when the recursive call is the very last operation, so the stack does not grow. Many languages, Python for example, do not do it, so deep recursion there is often rewritten as a loop."
+      ],
+      "questions": [
+        {
+          "key": "q1",
+          "ask": "What two parts must every recursive function have?",
+          "answer": "A base case that returns a value directly without recursion, and a recursive case that calls the function again with modified arguments moving toward the base case. A partly correct answer might mention one part but not both."
+        },
+        {
+          "key": "q2",
+          "ask": "What happens if a recursive function has no base case or never reaches it?",
+          "answer": "The function calls itself forever, each call adding a stack frame until the call stack overflows and the program crashes. A partly correct answer might say 'infinite loop' but not mention stack overflow as the mechanism."
+        },
+        {
+          "key": "q3",
+          "ask": "Why does mergesort have O(n log n) time complexity despite being recursive?",
+          "answer": "Because it splits the input in half recursively (log n levels) and merges them back together in linear time at each level, so n work repeated log n times gives O(n log n). A partly correct answer might mention splitting and merging but not combine them into the actual cost calculation."
+        }
+      ]
+    },
+    {
+      "key": "graphs-bfs-dfs",
+      "title": "Graphs, breadth-first and depth-first search",
+      "goal": "Compare breadth-first search and depth-first search in terms of traversal order, data structures used, and typical applications",
+      "points": [
+        "A graph is a set of nodes, also called vertices, joined by edges, like cities joined by roads. Programs usually store it as an adjacency list: for each node, the list of its neighbours.",
+        "Breadth-first search (BFS) explores nodes level by level using a queue, visiting all neighbors of the current node before moving to the next deeper level, which makes it ideal for finding shortest paths in unweighted graphs.",
+        "Depth-first search (DFS) explores as far as possible along each branch before backtracking, using a stack (or recursion), which makes it suitable for maze solving, topological sorting, and cycle detection.",
+        "Both BFS and DFS run in O(V + E) time for a graph with V vertices and E edges, since each vertex and edge is processed at most once. Both must remember which nodes they already visited, or a cycle would make them loop forever."
+      ],
+      "questions": [
+        {
+          "key": "q1",
+          "ask": "What data structure does BFS use to manage which nodes to visit next?",
+          "answer": "A queue, which ensures that nodes are visited in the order they were discovered, level by level. A partly correct answer might say 'list' but not specify FIFO queue behavior."
+        },
+        {
+          "key": "q2",
+          "ask": "How can depth-first search tell that a directed graph has a cycle?",
+          "answer": "While following a path, it keeps track of the nodes on the current path; if it reaches a node that is still on that path, there is a cycle. That edge back to an ancestor is called a back edge. A partly correct answer mentions visited nodes without the current path: in a directed graph, reaching a node visited earlier on another branch is not a cycle."
+        },
+        {
+          "key": "q3",
+          "ask": "Which traversal finds the shortest path in an unweighted graph, and why?",
+          "answer": "BFS finds the shortest path because it explores all nodes at distance k before nodes at distance k+1, guaranteeing the first time a node is reached is via the fewest edges. A partly correct answer might say 'BFS' but not explain the level-by-level guarantee."
+        }
+      ]
+    },
+    {
+      "key": "sorting",
+      "title": "Sorting algorithms",
+      "goal": "Compare insertion sort, merge sort, and quick sort in terms of time complexity, stability, and typical use cases",
+      "points": [
+        "Insertion sort is stable and runs in O(n²) time in the worst and average case, but O(n) in the best case when the input is nearly sorted, making it useful for small or almost-sorted data.",
+        "Merge sort is stable, runs in O(n log n) time in all cases, and uses O(n) extra space, making it reliable for large datasets where performance consistency matters.",
+        "Quick sort takes O(n log n) time on average and sorts in place, but its worst case is O(n²), for example on already sorted input when the first element is always the pivot. Choosing the pivot at random makes that case very unlikely, and quick sort is usually the fastest in practice.",
+        "A stable sort keeps equal elements in their original order. That lets you sort in passes: sort people by first name, then stably by last name, and people with the same last name stay in first-name order."
+      ],
+      "questions": [
+        {
+          "key": "q1",
+          "ask": "What is the best-case time complexity of insertion sort, and when does it occur?",
+          "answer": "O(n) time when the input is already sorted, because each new element is compared once to its predecessor and inserted without shifting any elements. A partly correct answer might say 'fast' but omit the sorted-input condition."
+        },
+        {
+          "key": "q2",
+          "ask": "Why does merge sort guarantee O(n log n) time regardless of input order?",
+          "answer": "Because it always splits the array in half recursively and merges them, doing n work at each of log n levels, independent of the initial arrangement of elements. A partly correct answer might mention 'divide and conquer' but not explain the uniform level-by-level cost."
+        },
+        {
+          "key": "q3",
+          "ask": "What makes quick sort unstable, and why is this sometimes acceptable?",
+          "answer": "Quick sort swaps elements during partitioning, which can reorder equal keys, making it unstable; this is often acceptable when sorting primitive values where only the key value matters. A partly correct answer might say 'it is not stable' but not explain why via swapping or mention when instability doesn't matter."
+        }
+      ]
+    }
+  ]
+}

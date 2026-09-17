@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Teaching: Byte teaches an eight-lesson computer science course. It explains points, checks you follow,
+  asks questions word for word, and judges answers with a separate persona-free check. Scores and a
+  Leitner review schedule go in `progress/<course>.json`. Menus: Next Lesson, any lesson, Review Due
+  Questions, End Lesson. A badge shows the lesson and question. Your own courses are JSON files in
+  `courses/`, chosen with `course = "..."` in a teammate file.
 - Memory: each teammate remembers facts you share and your recent messages across launches, folds older
   messages into a short summary, and keeps it in `<settings folder>/memory/<teammate>.json` (owner-only).
   "Forget What … Remembers…" deletes it after asking.

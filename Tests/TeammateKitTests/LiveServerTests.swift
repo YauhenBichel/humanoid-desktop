@@ -26,4 +26,28 @@ struct LiveServerTests {
         let overlap = Double(words(reply.say).intersection(words(heard)).count) / Double(max(1, words(reply.say).count))
         #expect(overlap > 0.6)
     }
+
+    /// The real model follows the tutor's steps: it moves on when the person follows, and judges a right and a
+    /// wrong answer as such.
+    @Test func byteTeachesALessonAndJudgesAnswers() async throws {
+        let settings = try TeammateLibrary.loadSettings()
+        let course = try #require(CourseCatalog.builtIn.course(key: "cs-foundations"))
+        let lesson = try #require(course.lesson(key: "binary-search"))
+        let tutor = Tutor(
+            course: course, plan: .lesson(lesson), progress: StudyProgress(course: course.key),
+            persona: Teammate.byte.persona(userName: settings.userName), chat: OpenAIChatClient(settings: settings))
+        print("Byte: \(await tutor.begin().say)")
+        for _ in lesson.points.indices {
+            let said = "Got it, that makes sense. Next, please."
+            print("> \(said)\nByte: \(await tutor.respond(to: said).say)")
+        }
+        #expect(await tutor.step == .asking(question: 0), "the model did not move through the points")
+        let right = "The list has to be sorted, in the same order the comparisons use."
+        print("> \(right)\nByte: \(await tutor.respond(to: right).say)")
+        let wrong = "Because it checks every element one by one from the start."
+        print("> \(wrong)\nByte: \(await tutor.respond(to: wrong).say)")
+        let progress = await tutor.progress
+        #expect(progress.questions["binary-search/q1"]?.last == .correct)
+        #expect(progress.questions["binary-search/q2"]?.last == .wrong)
+    }
 }

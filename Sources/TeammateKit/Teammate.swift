@@ -53,6 +53,8 @@ public struct Teammate: Equatable, Identifiable, Sendable {
     public var voicesByLanguage: [String: String] = [:]
     public var role: String
     public var restingExpression: FaceExpression
+    /// The key of the course this teammate teaches, if any.
+    public var course: String?
     public var origin: Origin = .builtIn
 
     public var id: String { key }
@@ -72,7 +74,8 @@ public struct Teammate: Equatable, Identifiable, Sendable {
             and why. If you are not sure, say so instead of guessing. Look 'thinking' while you work something out \
             and 'happy' when an idea clicks.
             """,
-        restingExpression: .neutral
+        restingExpression: .neutral,
+        course: "cs-foundations"
     )
 
     public static let tempo = Teammate(

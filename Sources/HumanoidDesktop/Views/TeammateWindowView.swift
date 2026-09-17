@@ -15,6 +15,9 @@ struct TeammateWindowView: View {
     var body: some View {
         VStack(spacing: 6) {
             Spacer(minLength: 0)
+            if let study = session.study {
+                StudyBadge(text: AppText.studyStatus(study), colours: session.teammate.colours)
+            }
             if !session.bubble.isEmpty {
                 SpeechBubble(text: session.bubble, colours: session.teammate.colours)
             }
@@ -63,6 +66,18 @@ struct TeammateWindowView: View {
                 isOn: Binding(get: { teammate.key == session.teammate.key }, set: { _ in session.choose(teammate) }))
         }
         Divider()
+        if let study = StudyMenu(session: session) {
+            Menu(study.title) {
+                ForEach(study.actions) { entry in
+                    Button(entry.title, action: entry.action).disabled(!entry.isEnabled)
+                }
+                Divider()
+                ForEach(study.lessons) { entry in
+                    Toggle(entry.title, isOn: Binding(get: { entry.isChecked }, set: { _ in entry.action() }))
+                }
+            }
+            Divider()
+        }
         Button(AppText.hide(session.teammate.name), action: commands.hideTeammate)
         Button(AppText.forgetMemory(session.teammate.name), action: commands.forgetMemory)
         Button(AppText.openSettings, action: commands.openSettings)
@@ -88,6 +103,22 @@ struct SpeechBubble: View {
             .frame(maxWidth: 280)
             .fixedSize(horizontal: false, vertical: true)
             .textSelection(.enabled)
+    }
+}
+
+/// Which lesson is on, and which question is waiting for an answer.
+struct StudyBadge: View {
+    let text: String
+    let colours: Teammate.Colours
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(colours.glow.color)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(colours.screen.color.opacity(0.9)))
     }
 }
 

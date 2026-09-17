@@ -134,7 +134,8 @@ final class MemoryShelf: MemoryStore, @unchecked Sendable {
 @Suite struct SessionMemoryTests {
     private func session(chat: CannedChat, memories: MemoryShelf) -> TeammateSession {
         let session = TeammateSession(
-            player: FakePlayer(), recorder: FakeRecorder(), choices: MemoryChoices(), memories: memories
+            player: FakePlayer(), recorder: FakeRecorder(), choices: MemoryChoices(), memories: memories,
+            progressStore: ProgressShelf()
         ) { _ in
             .init(chat: chat, speech: FixedSpeech(), transcription: FixedTranscription())
         }
