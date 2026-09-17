@@ -4,14 +4,25 @@ import Foundation
 ///
 ///     <settings folder>/settings.toml
 ///     <settings folder>/teammates/*.toml
+///     <settings folder>/courses/*.json
 ///
 /// The folder is `$HUMANOID_CONFIG_DIR` if set; otherwise `%APPDATA%\\humanoid-companion` on Windows, and
 /// `$XDG_CONFIG_HOME/humanoid-companion` or `~/.config/humanoid-companion` on macOS, Linux and other systems.
 public struct TeammateLibrary: Sendable {
     public let settings: TeammateSettings
     public let catalog: TeammateCatalog
-    /// A broken settings file or teammate file, said plainly; the rest still works.
+    public let courses: CourseCatalog
+    /// A broken settings, teammate or course file, said plainly; the rest still works.
     public let problems: [String]
+
+    public init(
+        settings: TeammateSettings, catalog: TeammateCatalog, courses: CourseCatalog = .builtIn, problems: [String]
+    ) {
+        self.settings = settings
+        self.catalog = catalog
+        self.courses = courses
+        self.problems = problems
+    }
 
     public enum Platform: Sendable {
         case windows, unixLike
@@ -49,14 +60,19 @@ public struct TeammateLibrary: Sendable {
     }
 
     public static func load(environment: [String: String] = ProcessInfo.processInfo.environment) -> TeammateLibrary {
-        let catalog = TeammateCatalog.load(
-            directory: folder(environment: environment).appendingPathComponent("teammates"))
+        let folder = folder(environment: environment)
+        let catalog = TeammateCatalog.load(directory: folder.appendingPathComponent("teammates"))
+        let courses = CourseCatalog.load(directory: folder.appendingPathComponent("courses"))
+        let missingCourses = catalog.teammates.compactMap { teammate in
+            teammate.course.flatMap { courses.course(key: $0) == nil ? "\(teammate.name): no course named \($0)" : nil }
+        }
+        let problems = catalog.problems + courses.problems + missingCourses
         do {
             let settings = try loadSettings(environment: environment)
-            return TeammateLibrary(settings: settings, catalog: catalog, problems: catalog.problems)
+            return TeammateLibrary(settings: settings, catalog: catalog, courses: courses, problems: problems)
         } catch {
             return TeammateLibrary(
-                settings: .defaults, catalog: catalog, problems: [error.description] + catalog.problems)
+                settings: .defaults, catalog: catalog, courses: courses, problems: [error.description] + problems)
         }
     }
 

@@ -18,8 +18,11 @@ binary="$(swift build -c release --show-bin-path)/HumanoidDesktop"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$binary" "$APP/Contents/MacOS/HumanoidDesktop"
-# The strings the app shows, one .lproj per language (Bundle.module looks for this bundle in Contents/Resources).
-cp -R "$(dirname "$binary")/humanoid-desktop_HumanoidDesktop.bundle" "$APP/Contents/Resources/"
+# Resource bundles go in Contents/Resources, where Bundle.packaged finds them: the app's strings, one .lproj per
+# language, and TeammateKit's built-in courses.
+for bundle in HumanoidDesktop TeammateKit; do
+  cp -R "$(dirname "$binary")/humanoid-desktop_$bundle.bundle" "$APP/Contents/Resources/"
+done
 cat >"$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -93,6 +93,7 @@ import Testing
         phrases.stopping = "Добра, маўчу."
         let session = TeammateSession(
             player: FakePlayer(), recorder: FakeRecorder(), choices: MemoryChoices(), memories: MemoryShelf(),
+            progressStore: ProgressShelf(),
             phrases: phrases
         ) { _ in
             .init(chat: CannedChat(say: "Hi"), speech: FixedSpeech(), transcription: FixedTranscription())

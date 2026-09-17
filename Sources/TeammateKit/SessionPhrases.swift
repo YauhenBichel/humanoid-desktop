@@ -18,6 +18,13 @@ public struct SessionPhrases: Sendable {
     public var microphoneFailed: @Sendable (_ reason: String) -> String
     public var forgotten: @Sendable (_ teammate: Teammate) -> String
     public var memoryFailed: @Sendable (_ reason: String) -> String
+    public var nothingToReview: String
+    public var question: @Sendable (_ number: Int, _ count: Int, _ ask: String) -> String
+    public var studyEnded: String
+    public var courseFinished: @Sendable (_ course: String) -> String
+    public var lessonFinished: @Sendable (_ lesson: String, _ correct: Int, _ total: Int) -> String
+    public var reviewFinished: @Sendable (_ correct: Int, _ total: Int) -> String
+    public var progressFailed: @Sendable (_ reason: String) -> String
 
     public init(
         thinking: String,
@@ -34,7 +41,14 @@ public struct SessionPhrases: Sendable {
         transcriptionServerFailed: @escaping @Sendable (_ server: String, _ reason: String) -> String,
         microphoneFailed: @escaping @Sendable (_ reason: String) -> String,
         forgotten: @escaping @Sendable (_ teammate: Teammate) -> String,
-        memoryFailed: @escaping @Sendable (_ reason: String) -> String
+        memoryFailed: @escaping @Sendable (_ reason: String) -> String,
+        nothingToReview: String,
+        question: @escaping @Sendable (_ number: Int, _ count: Int, _ ask: String) -> String,
+        studyEnded: String,
+        courseFinished: @escaping @Sendable (_ course: String) -> String,
+        lessonFinished: @escaping @Sendable (_ lesson: String, _ correct: Int, _ total: Int) -> String,
+        reviewFinished: @escaping @Sendable (_ correct: Int, _ total: Int) -> String,
+        progressFailed: @escaping @Sendable (_ reason: String) -> String
     ) {
         self.thinking = thinking
         self.listening = listening
@@ -51,6 +65,13 @@ public struct SessionPhrases: Sendable {
         self.microphoneFailed = microphoneFailed
         self.forgotten = forgotten
         self.memoryFailed = memoryFailed
+        self.nothingToReview = nothingToReview
+        self.question = question
+        self.studyEnded = studyEnded
+        self.courseFinished = courseFinished
+        self.lessonFinished = lessonFinished
+        self.reviewFinished = reviewFinished
+        self.progressFailed = progressFailed
     }
 
     public static let english = SessionPhrases(
@@ -70,6 +91,13 @@ public struct SessionPhrases: Sendable {
         transcriptionServerFailed: { server, reason in "No transcription from \(server): \(reason)" },
         microphoneFailed: { reason in "Could not start the microphone: \(reason)" },
         forgotten: { teammate in "Done: I forgot everything I remembered. I'm \(teammate.name), nice to meet you!" },
-        memoryFailed: { reason in "Could not keep what I remember: \(reason)" }
+        memoryFailed: { reason in "Could not keep what I remember: \(reason)" },
+        nothingToReview: "Nothing to review right now: you remember it all. Let's learn something new!",
+        question: { number, count, ask in "Question \(number) of \(count): \(ask)" },
+        studyEnded: "Okay, we'll stop here. Your progress is saved.",
+        courseFinished: { course in "You finished every lesson of \(course)! We can review any time." },
+        lessonFinished: { lesson, correct, total in "Lesson \(lesson) done: \(correct) of \(total) right." },
+        reviewFinished: { correct, total in "Review done: \(correct) of \(total) right." },
+        progressFailed: { reason in "Could not keep your lesson progress: \(reason)" }
     )
 }

@@ -38,6 +38,20 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         let talkHint = NSMenuItem(title: AppText.talkHint(shortcutName), action: nil, keyEquivalent: "")
         talkHint.isEnabled = false
         menu.addItem(talkHint)
+        if let study = StudyMenu(session: session) {
+            menu.addItem(.separator())
+            let lessons = NSMenu()
+            for entry in study.actions {
+                lessons.addItem(ActionMenuItem(entry))
+            }
+            lessons.addItem(.separator())
+            for entry in study.lessons {
+                lessons.addItem(ActionMenuItem(entry))
+            }
+            let submenu = NSMenuItem(title: study.title, action: nil, keyEquivalent: "")
+            submenu.submenu = lessons
+            menu.addItem(submenu)
+        }
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem(title: AppText.forgetMemory(name), action: commands.forgetMemory))
         menu.addItem(ActionMenuItem(title: AppText.openSettings, key: ",", action: commands.openSettings))
@@ -55,6 +69,12 @@ private final class ActionMenuItem: NSMenuItem {
         self.handler = handler
         super.init(title: title, action: #selector(run), keyEquivalent: key)
         target = self
+    }
+
+    convenience init(_ entry: StudyMenu.Entry) {
+        self.init(title: entry.title, action: entry.action)
+        state = entry.isChecked ? .on : .off
+        isEnabled = entry.isEnabled
     }
 
     @available(*, unavailable)

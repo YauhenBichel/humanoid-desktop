@@ -10,7 +10,8 @@ import PackageDescription
 
 var products: [Product] = [.library(name: "TeammateKit", targets: ["TeammateKit"])]
 var targets: [Target] = [
-    .target(name: "TeammateKit"),
+    // Courses/ holds the built-in courses, JSON files in the same format as <settings folder>/courses.
+    .target(name: "TeammateKit", resources: [.copy("Courses")]),
     // Fixtures/ holds files written by humanoid-companion itself (its settings and teammate templates):
     // both apps must read the same files.
     .testTarget(name: "TeammateKitTests", dependencies: ["TeammateKit"], resources: [.copy("Fixtures")]),

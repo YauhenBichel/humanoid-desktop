@@ -17,7 +17,7 @@ with its face, a speech bubble and its voice. The model behind it is **one you c
 
 | | Byte | Tempo |
 |---|---|---|
-| **For** | explaining computer science: algorithms, data structures, complexity, one idea at a time | music: songs, styles, rhythm, what a song is about |
+| **For** | explaining computer science: algorithms, data structures, complexity, one idea at a time; teaches a course with quizzes | music: songs, styles, rhythm, what a song is about |
 | **Looks** | green face, antenna | pink face, headphones |
 | **Voice** | Kokoro `af_heart` | Kokoro `af_bella` |
 
@@ -81,6 +81,48 @@ API reads `HUMANOID_LLM_API_KEY` from the environment.
   Remembers…** in the menu bar item or the right-click menu deletes it.
 
 It can't see your screen, open apps or browse the web, and it says so.
+
+## Learn with Byte
+
+Byte teaches a short course, **Computer science foundations**: Big-O notation, arrays and linked lists,
+stacks and queues, hash tables, binary search, recursion, graphs (BFS and DFS) and sorting.
+
+- **Start:** **Lessons: … → Next Lesson** in the menu bar item or the right-click menu, or pick any lesson.
+- **A lesson:** Byte explains each point with an example and checks you follow. Say "ok" or "next" to go
+  on, or ask about the point. Then come three short questions: answer by typing or speaking.
+- **Checking:** each answer is judged against the course's own answer, as right, partly right or not right,
+  and Byte says what was missing. At the end you hear your score, for example "2 of 3 right".
+- **Review:** questions come back on a schedule. A wrong answer returns in 10 minutes. A right one returns
+  after a day, then after 3, 7 and 21 days. **Review N Due Questions** asks up to five of the oldest.
+- **Continuity:** your progress is kept in `progress/<course>.json`. In ordinary chat, Byte knows which
+  lessons you finished and whether a review is due.
+
+The questions are read out word for word. The decisions (do you follow, is the answer right) come from a
+separate, strict check without Byte's cheerful persona. Byte then says the result in its own voice.
+
+**Your own course:** put a JSON file in `~/.config/humanoid-companion/courses/`, named after its key, and
+set `course = "<key>"` in a teammate's file:
+
+```json
+{
+  "key": "astronomy",
+  "title": "The night sky",
+  "lessons": [
+    {
+      "key": "moon-phases",
+      "title": "Moon phases",
+      "goal": "Explain why the Moon's shape seems to change.",
+      "points": ["The Moon shines by reflected sunlight: we always see its lit half from a changing angle."],
+      "questions": [
+        {"key": "q1", "ask": "Why does the Moon look different through the month?",
+         "answer": "We see different parts of its sunlit half as it orbits Earth; it is not Earth's shadow."}
+      ]
+    }
+  ]
+}
+```
+
+A course with a mistake is reported under the robot, naming the file and the lesson.
 
 ## Make your own teammate
 
@@ -151,12 +193,16 @@ flowchart LR
     stt -- text --> conv[Conversation<br/>persona, memory,<br/>stop words, reply checks]
     app -- text --> conv
     conv -- "JSON schema: say, expression, remember" --> llm[(your chat model)]
+    app -- "a lesson turn" --> tutor[Tutor<br/>points, questions, scores]
+    tutor -- "check: next or help, verdict" --> llm
+    tutor -- "say it as the teammate" --> llm
     llm --> conv
     conv -- "say, expression" --> app
     app -- say --> tts[speech server]
     tts -- WAV --> app
     files[settings.toml<br/>teammates/*.toml] --> app
-    memory[memory/*.json] <--> app
+    memory[memory/*.json<br/>progress/*.json] <--> app
+    courses[courses/*.json] --> app
 ```
 
 **`Sources/TeammateKit`** (no user interface, fully tested)
@@ -165,6 +211,8 @@ flowchart LR
 |---|---|
 | `TeammateSession` | an `@Observable` state machine, and the only place that decides what happens next: answer, speak, listen, switch |
 | `Conversation` | an actor holding the persona and the memory; stop words, reply checks, apologies; folds old messages into a summary |
+| `Tutor`, `LessonChecker` | a lesson or review as steps; persona-free checks decide; the teammate speaks |
+| `Course`, `StudyProgress` | course files and their checks; progress with the review schedule, and its store |
 | `Memory.swift` | `TeammateMemory` (facts, summary, recent messages, with limits) and the `MemoryStore` that keeps it |
 | `Services.swift` | small protocols the session depends on (chat, speech, transcription, playback, recording, the saved choice, HTTP) |
 | `OpenAIClients.swift` | typed `Codable` clients for OpenAI-compatible servers |
@@ -186,7 +234,8 @@ accessory is a new painter, and nothing else changes. Everything builds in Swift
 strict concurrency checking and no warnings.
 
 Stored on your Mac: the chosen teammate and the window position (user defaults), and each teammate's
-memory in `~/.config/humanoid-companion/memory/<teammate>.json`, readable only by your account. The
+memory in `~/.config/humanoid-companion/memory/<teammate>.json` and your lesson progress in
+`progress/<course>.json`, both readable only by your account. The
 memory has limits (30 facts, a short summary, the last 12 messages) and leaves your Mac only inside the
 prompts sent to the chat server you configured. The model is told never to note passwords, keys,
 addresses, health or money details. Recordings are sent only to your transcription server and deleted
