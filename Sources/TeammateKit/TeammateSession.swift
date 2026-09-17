@@ -53,6 +53,7 @@ public final class TeammateSession {
     @ObservationIgnored private let player: any AudioPlaying
     @ObservationIgnored private let recorder: any AudioRecording
     @ObservationIgnored private let choices: any TeammateChoiceStore
+    @ObservationIgnored private let memories: any MemoryStore
     @ObservationIgnored private let phrases: SessionPhrases
     @ObservationIgnored private var work: Task<Void, Never>?
     /// Increases whenever what the teammate is doing is interrupted; late results from earlier turns are dropped.
@@ -64,12 +65,14 @@ public final class TeammateSession {
         player: any AudioPlaying,
         recorder: any AudioRecording,
         choices: any TeammateChoiceStore,
+        memories: any MemoryStore,
         phrases: SessionPhrases = .english,
         makeServices: @escaping (TeammateSettings) -> Services = Services.openAICompatible
     ) {
         self.player = player
         self.recorder = recorder
         self.choices = choices
+        self.memories = memories
         self.phrases = phrases
         self.makeServices = makeServices
         let services = makeServices(.defaults)
@@ -84,20 +87,49 @@ public final class TeammateSession {
         settings = library.settings
         catalog = library.catalog
         services = makeServices(library.settings)
+        notice = library.problems.joined(separator: "\n")
         let remembered = choices.chosenKey.flatMap(catalog.teammate(key:))
         choose(remembered ?? catalog.teammate(key: teammate.key) ?? catalog.teammates[0])
-        notice = library.problems.joined(separator: "\n")
     }
 
     public func choose(_ newTeammate: Teammate) {
         interrupt()
         teammate = newTeammate
         choices.chosenKey = newTeammate.key
+        var memory = TeammateMemory()
+        do {
+            memory = try memories.load(teammateKey: newTeammate.key)
+        } catch {
+            addNotice(phrases.memoryFailed(String(describing: error)))
+        }
         conversation = Conversation(
             teammate: newTeammate, userName: settings.userName, language: settings.language, phrases: phrases,
-            chat: services.chat)
+            memory: memory, chat: services.chat)
         expression = newTeammate.restingExpression
         bubble = phrases.greeting(settings.userName, newTeammate)
+    }
+
+    /// Shows a problem below any already shown (a settings file with a mistake, say), once.
+    private func addNotice(_ line: String) {
+        let lines = notice.split(separator: "\n").map(String.init)
+        guard !lines.contains(line) else { return }
+        notice = (lines + [line]).joined(separator: "\n")
+    }
+
+    /// Deletes what the current teammate remembers, and starts over with an empty memory.
+    public func forgetMemory() {
+        interrupt()
+        do {
+            try memories.erase(teammateKey: teammate.key)
+        } catch {
+            notice = phrases.memoryFailed(String(describing: error))
+            return
+        }
+        conversation = Conversation(
+            teammate: teammate, userName: settings.userName, language: settings.language, phrases: phrases,
+            chat: services.chat)
+        expression = .happy
+        bubble = phrases.forgotten(teammate)
     }
 
     // MARK: Talking
@@ -117,11 +149,23 @@ public final class TeammateSession {
             let reply = await conversation.respond(to: said)
             guard let self, self.isCurrent(turn) else { return }
             self.show(reply)
+            if reply.source == .model {
+                await self.keepMemory(of: conversation)
+            }
             if reply.source == .stopWord {
                 self.activity = .idle
             } else {
                 await self.speak(reply.say, turn: turn)
             }
+        }
+    }
+
+    private func keepMemory(of conversation: Conversation) async {
+        let memory = await conversation.memory
+        do {
+            try memories.save(memory, teammateKey: conversation.teammate.key)
+        } catch {
+            notice = phrases.memoryFailed(String(describing: error))
         }
     }
 

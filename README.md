@@ -76,6 +76,9 @@ API reads `HUMANOID_LLM_API_KEY` from the environment.
 - **Close:** hover over the robot and click ×, or right-click it. Bring it back from the menu bar item.
 - **Switch teammates, open settings, reload, quit:** right-click the robot, or use the menu bar item.
 - **Quiet:** "stop" or "be quiet" never reaches the model. The teammate just stops.
+- **Memory:** each teammate remembers what you tell it about yourself ("preparing for an interview in
+  November", "prefers Python") and your last few messages, across launches. **Forget What Byte
+  Remembers…** in the menu bar item or the right-click menu deletes it.
 
 It can't see your screen, open apps or browse the web, and it says so.
 
@@ -145,14 +148,15 @@ on Windows. `HUMANOID_CONFIG_DIR` overrides it everywhere.
 flowchart LR
     you([you]) -- "type, or hold ⌥Space" --> app[HumanoidDesktop<br/>floating character, menu bar]
     app -- "WAV while ⌥Space is held" --> stt[transcription server]
-    stt -- text --> conv[Conversation<br/>persona, recent messages,<br/>stop words, reply checks]
+    stt -- text --> conv[Conversation<br/>persona, memory,<br/>stop words, reply checks]
     app -- text --> conv
-    conv -- "JSON schema: say, expression" --> llm[(your chat model)]
+    conv -- "JSON schema: say, expression, remember" --> llm[(your chat model)]
     llm --> conv
     conv -- "say, expression" --> app
     app -- say --> tts[speech server]
     tts -- WAV --> app
     files[settings.toml<br/>teammates/*.toml] --> app
+    memory[memory/*.json] <--> app
 ```
 
 **`Sources/TeammateKit`** (no user interface, fully tested)
@@ -160,7 +164,8 @@ flowchart LR
 | Part | Job |
 |---|---|
 | `TeammateSession` | an `@Observable` state machine, and the only place that decides what happens next: answer, speak, listen, switch |
-| `Conversation` | an actor holding the persona and recent messages; stop words, reply checks, apologies |
+| `Conversation` | an actor holding the persona and the memory; stop words, reply checks, apologies; folds old messages into a summary |
+| `Memory.swift` | `TeammateMemory` (facts, summary, recent messages, with limits) and the `MemoryStore` that keeps it |
 | `Services.swift` | small protocols the session depends on (chat, speech, transcription, playback, recording, the saved choice, HTTP) |
 | `OpenAIClients.swift` | typed `Codable` clients for OpenAI-compatible servers |
 | `TeammateLibrary`, `TeammateCatalog`, `TeammateFile`, `Toml` | the settings and teammate files |
@@ -180,8 +185,12 @@ and a tap on ⌥Space released before microphone permission arrives never starts
 accessory is a new painter, and nothing else changes. Everything builds in Swift 6 language mode with
 strict concurrency checking and no warnings.
 
-Stored on your Mac: the chosen teammate and the window position (user defaults). Recordings are sent
-only to your transcription server and deleted right after.
+Stored on your Mac: the chosen teammate and the window position (user defaults), and each teammate's
+memory in `~/.config/humanoid-companion/memory/<teammate>.json`, readable only by your account. The
+memory has limits (30 facts, a short summary, the last 12 messages) and leaves your Mac only inside the
+prompts sent to the chat server you configured. The model is told never to note passwords, keys,
+addresses, health or money details. Recordings are sent only to your transcription server and deleted
+right after.
 
 ## Develop
 

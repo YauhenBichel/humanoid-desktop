@@ -85,10 +85,11 @@ private func makeSession(
     speech: FixedSpeech = FixedSpeech(),
     transcription: FixedTranscription = FixedTranscription(),
     recorder: FakeRecorder = FakeRecorder(),
-    choices: MemoryChoices = MemoryChoices()
+    choices: MemoryChoices = MemoryChoices(),
+    memories: MemoryShelf = MemoryShelf()
 ) -> (TeammateSession, FakePlayer) {
     let player = FakePlayer()
-    let session = TeammateSession(player: player, recorder: recorder, choices: choices) { _ in
+    let session = TeammateSession(player: player, recorder: recorder, choices: choices, memories: memories) { _ in
         .init(chat: chat, speech: speech, transcription: transcription)
     }
     session.configure(with: TeammateLibrary(settings: .defaults, catalog: .builtIn, problems: []))

@@ -39,6 +39,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         talkHint.isEnabled = false
         menu.addItem(talkHint)
         menu.addItem(.separator())
+        menu.addItem(ActionMenuItem(title: AppText.forgetMemory(name), action: commands.forgetMemory))
         menu.addItem(ActionMenuItem(title: AppText.openSettings, key: ",", action: commands.openSettings))
         menu.addItem(ActionMenuItem(title: AppText.reload, key: "r", action: commands.reload))
         menu.addItem(.separator())

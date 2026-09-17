@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let session = TeammateSession(
         player: AudioPlayer(), recorder: AudioRecorder(), choices: UserDefaultsChoiceStore(),
+        memories: FileMemoryStore.standard(),
         phrases: AppText.sessionPhrases(shortcut: AppDelegate.talkCombination.displayName))
     private var panel: TeammatePanel?
     private var statusMenu: StatusMenu?
@@ -33,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.session.isChatOpen = true
                 self?.panel?.focus()
             },
+            forgetMemory: { [weak self] in self?.confirmForgetting() },
             openSettings: { [weak self] in self?.openSettings() },
             reload: { [weak self] in self?.reload() },
             quit: { NSApp.terminate(nil) })
@@ -59,6 +61,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func reload() {
         session.configure(with: TeammateLibrary.load())
+    }
+
+    /// Forgetting cannot be undone, so it asks first.
+    private func confirmForgetting() {
+        let name = session.teammate.name
+        let alert = NSAlert()
+        alert.messageText = AppText.forgetMemoryQuestion(name)
+        alert.informativeText = AppText.forgetMemoryDetail(name)
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: AppText.forget)
+        alert.addButton(withTitle: AppText.cancel)
+        NSApp.activate()
+        if alert.runModal() == .alertFirstButtonReturn {
+            session.forgetMemory()
+        }
     }
 
     /// Creates the settings file if needed and shows it in Finder.

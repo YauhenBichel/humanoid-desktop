@@ -92,7 +92,8 @@ import Testing
         phrases.greeting = { _, teammate in "Прывітанне! Я \(teammate.name)." }
         phrases.stopping = "Добра, маўчу."
         let session = TeammateSession(
-            player: FakePlayer(), recorder: FakeRecorder(), choices: MemoryChoices(), phrases: phrases
+            player: FakePlayer(), recorder: FakeRecorder(), choices: MemoryChoices(), memories: MemoryShelf(),
+            phrases: phrases
         ) { _ in
             .init(chat: CannedChat(say: "Hi"), speech: FixedSpeech(), transcription: FixedTranscription())
         }

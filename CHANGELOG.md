@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Memory: each teammate remembers facts you share and your recent messages across launches, folds older
+  messages into a short summary, and keeps it in `<settings folder>/memory/<teammate>.json` (owner-only).
+  "Forget What … Remembers…" deletes it after asking.
 - Close the teammate from a × on hover or a right-click menu (which also switches teammates, opens
   settings, reloads and quits).
 - Fixed: an answer that arrives after switching teammates no longer appears in the new teammate's bubble.
