@@ -241,6 +241,28 @@ prompts sent to the chat server you configured. The model is told never to note 
 addresses, health or money details. Recordings are sent only to your transcription server and deleted
 right after.
 
+## FAQ
+
+### Does it send my data anywhere?
+
+Only to the servers you set in `settings.toml`, which can all be on your Mac. Your messages and memory go inside the prompts to your chat server. Recordings go only to your transcription server and are deleted right after.
+
+### Does it work without a speech server?
+
+Yes. The teammate still answers in the speech bubble; you just do not hear it, and voice input needs a transcription server.
+
+### Which models can I use?
+
+Any server with an OpenAI-compatible chat API that supports JSON-schema answers, for example Ollama. A hosted API works too: set `HUMANOID_LLM_API_KEY` in the environment.
+
+### Does it run on Linux or Windows?
+
+Not the desktop app: it is macOS 14 or later. The `TeammateKit` library builds and is tested on Linux; see [Platforms](#platforms).
+
+### How is it different from humanoid-companion?
+
+[humanoid-companion](https://github.com/YauhenBichel/humanoid-companion) is a simulated robot that walks in MuJoCo. This one is a character on your desktop. They share the teammate file format.
+
 ## Develop
 
 ```bash
