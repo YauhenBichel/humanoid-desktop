@@ -245,7 +245,7 @@ right after.
 
 ### Does it send my data anywhere?
 
-Only to the servers you set in `settings.toml`, which by default are on your Mac. Your messages and memory go inside the prompts to your chat server. Recordings go only to your transcription server and are deleted right after. Nothing goes to the author.
+Only to the servers you set in `settings.toml`, which can all be on your Mac. Your messages and memory go inside the prompts to your chat server. Recordings go only to your transcription server and are deleted right after.
 
 ### Does it work without a speech server?
 
